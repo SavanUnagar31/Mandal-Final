@@ -1,0 +1,618 @@
+Mandal Backend Project Structure
+
+The following is a complete directory structure of the Mandal backend project, including all folders and files, along with their purposes and usage in the context of a community finance management system. The project uses Node.js, Express, Sequelize, MySQL, Winston, Joi, JWT, bcrypt, nodemailer, Razorpay, Twilio, Redis, BullMQ, Swagger, Inversify, and Jest to handle user registration, mandal creation, member management, contributions, loans, and deployment with Docker and Kubernetes. Logs are stored in `logs/2025/August/29.log` format, and responses follow a standard format: `{ success: boolean, data: any, message: string }` for success and `{ success: false, error: string }` for errors.
+
+# Root Directory: mandal-backend/
+- Dockerfile
+  Purpose: Defines the Docker image for the Node.js application.
+  Usage: Used to build a containerized environment with Node.js 18, installing dependencies and running `server.js`. Enables consistent deployment across environments.
+  
+- docker-compose.yml
+  Purpose: Configures Docker services for the application, MySQL, and Redis.
+  Usage: Sets up local development environment with app, database, and cache services, specifying ports, environment variables, and volumes for persistence.
+
+- .env
+  Purpose: Stores environment-specific configuration variables.
+  Usage: Contains sensitive data like database credentials, JWT secret, and API keys for SendGrid, Razorpay, Twilio, and Redis. Loaded by `dotenv` for secure configuration.
+
+- .env.example
+  Purpose: Template for `.env` file with placeholder values.
+  Usage: Guides developers to set up required environment variables without exposing sensitive data.
+
+- .gitignore
+  Purpose: Specifies files and folders to exclude from Git version control.
+  Usage: Ignores `node_modules`, `.env`, logs, and other temporary files to keep the repository clean.
+
+- package.json
+  Purpose: Defines project metadata, dependencies, and scripts.
+  Usage: Lists dependencies (e.g., express, sequelize, winston) and scripts for starting the server (`npm start`), running tests (`npm test`), migrations, and seeding.
+
+- server.js
+  Purpose: Entry point of the application.
+  Usage: Initializes Express app, sets up middleware, routes (`/api/v1`, `/api/v2`, `/api-docs`), database connection, and error handling. Starts the server on the specified port.
+
+- README.md
+  Purpose: Project documentation.
+  Usage: Provides instructions for setting up, running, testing, and deploying the application, including Docker and Kubernetes commands.
+
+# src/
+Purpose: Contains the source code for the application, organized into subdirectories for API, domains, infrastructure, events, utils, config, and core.
+
+## src/api/
+Purpose: Defines API endpoints for v1 and v2 versions, including routes, controllers, middlewares, and validators.
+
+### src/api/v1/
+Purpose: Implements version 1 of the API with routes, controllers, middlewares, and validators for authentication, mandal, member, contribution, and loan functionalities.
+
+#### src/api/v1/routes/
+Purpose: Defines Express routes for API endpoints.
+
+- index.js
+  Purpose: Exports all v1 routes as a single module.
+  Usage: Combines routes from `auth.routes.js`, `mandal.routes.js`, `member.routes.js`, `contribution.routes.js`, and `loan.routes.js` under `/api/v1`.
+
+- auth.routes.js
+  Purpose: Defines authentication-related routes.
+  Usage: Handles POST requests for `/register`, `/login`, and `/verify` endpoints, using validators and controllers for user registration, login, and email verification.
+
+- mandal.routes.js
+  Purpose: Defines mandal-related routes.
+  Usage: Handles POST (`/`), GET (`/:id`), PUT (`/:id`), and DELETE (`/:id`) for creating, retrieving, updating, and deleting mandals, with authentication and role-based middleware.
+
+- member.routes.js
+  Purpose: Defines member-related routes.
+  Usage: Handles POST (`/:mandalId`), GET (`/:mandalId`), and DELETE (`/:mandalId/:userId`) for adding, listing, and removing mandal members, with admin role checks.
+
+- contribution.routes.js
+  Purpose: Defines contribution-related routes.
+  Usage: Handles POST (`/:mandalId/pay`) and GET (`/:mandalId`) for paying and listing contributions, with member role checks and Razorpay integration.
+
+- loan.routes.js
+  Purpose: Defines loan-related routes.
+  Usage: Handles POST (`/:mandalId/request`), PUT (`/:loanId/approve`), POST (`/:loanId/repay`), and GET (`/:mandalId`) for loan requests, approvals, repayments, and listing, with appropriate role checks.
+
+#### src/api/v1/controllers/
+Purpose: Contains controller logic for handling API requests.
+
+- auth.controller.js
+  Purpose: Handles authentication logic.
+  Usage: Processes registration (creates user, sends verification code), login (issues JWT), and email verification, returning standardized responses.
+
+- mandal.controller.js
+  Purpose: Handles mandal-related logic.
+  Usage: Manages creation, retrieval, update, and deletion of mandals, ensuring creator is set as admin and enforcing role-based access.
+
+- member.controller.js
+  Purpose: Handles member management logic.
+  Usage: Adds, lists, and removes members from mandals, ensuring uniqueness and admin privileges.
+
+- contribution.controller.js
+  Purpose: Handles contribution-related logic.
+  Usage: Processes payments via Razorpay and lists contributions for a user in a mandal, ensuring amount meets requirements.
+
+- loan.controller.js
+  Purpose: Handles loan-related logic.
+  Usage: Manages loan requests, approvals (with interest calculation), repayments, and listing, ensuring proper mandal membership and status checks.
+
+#### src/api/v1/middlewares/
+Purpose: Contains middleware for authentication, authorization, validation, and error handling.
+
+- auth.middleware.js
+  Purpose: Verifies JWT tokens.
+  Usage: Checks for valid JWT in the Authorization header, decodes it, and attaches user data to the request.
+
+- role.middleware.js
+  Purpose: Enforces role-based access control.
+  Usage: Ensures the user has the required role (admin or member) for the mandal, checked via `MandalMember` repository.
+
+- validation.middleware.js
+  Purpose: Validates request bodies using Joi schemas.
+  Usage: Applies validation schemas from `validators/` to ensure data integrity before passing to controllers.
+
+- error.middleware.js
+  Purpose: Handles errors globally.
+  Usage: Logs errors with Winston and returns standardized error responses (`{ success: false, error: string }`).
+
+#### src/api/v1/validators/
+Purpose: Contains Joi validation schemas for API request bodies.
+
+- auth.validator.js
+  Purpose: Defines schemas for authentication endpoints.
+  Usage: Validates `register` (name, email, mobile, password), `login` (email, password), and `verify` (email, code) requests.
+
+- mandal.validator.js
+  Purpose: Defines schemas for mandal endpoints.
+  Usage: Validates `create` (name, contributionMode, contributionAmount, interestRate) and `update` (optional fields) requests.
+
+- member.validator.js
+  Purpose: Defines schema for member addition.
+  Usage: Validates `add` request with `userId`.
+
+- contribution.validator.js
+  Purpose: Defines schema for contribution payment.
+  Usage: Validates `pay` request with `amount`.
+
+- loan.validator.js
+  Purpose: Defines schemas for loan endpoints.
+  Usage: Validates `request` and `repay` (amount) and `approve` (duration) requests.
+
+### src/api/v2/
+Purpose: Implements version 2 of the API, currently a placeholder identical to v1, ready for future enhancements.
+
+#### src/api/v2/routes/
+Purpose: Defines v2 routes, mirroring v1 structure.
+
+- index.js
+  Purpose: Exports all v2 routes.
+  Usage: Combines v2 routes under `/api/v2`, same as v1 but marked as placeholder.
+
+- auth.routes.js
+  Purpose: Defines v2 authentication routes.
+  Usage: Same as v1, handles registration, login, and verification with placeholder comment.
+
+- mandal.routes.js
+  Purpose: Defines v2 mandal routes.
+  Usage: Same as v1, handles mandal CRUD operations with placeholder comment.
+
+- member.routes.js
+  Purpose: Defines v2 member routes.
+  Usage: Same as v1, handles member management with placeholder comment.
+
+- contribution.routes.js
+  Purpose: Defines v2 contribution routes.
+  Usage: Same as v1, handles contribution payments and listing with placeholder comment.
+
+- loan.routes.js
+  Purpose: Defines v2 loan routes.
+  Usage: Same as v1, handles loan operations with placeholder comment.
+
+#### src/api/v2/controllers/
+Purpose: Contains v2 controller logic, identical to v1 with placeholder comments.
+
+- auth.controller.js
+  Purpose: Handles v2 authentication logic.
+  Usage: Same as v1, processes registration, login, and verification.
+
+- mandal.controller.js
+  Purpose: Handles v2 mandal logic.
+  Usage: Same as v1, manages mandal CRUD operations.
+
+- member.controller.js
+  Purpose: Handles v2 member logic.
+  Usage: Same as v1, manages member addition, listing, and removal.
+
+- contribution.controller.js
+  Purpose: Handles v2 contribution logic.
+  Usage: Same as v1, processes payments and lists contributions.
+
+- loan.controller.js
+  Purpose: Handles v2 loan logic.
+  Usage: Same as v1, manages loan requests, approvals, repayments, and listing.
+
+#### src/api/v2/middlewares/
+Purpose: Contains v2 middleware, identical to v1 with placeholder comments.
+
+- auth.middleware.js
+  Purpose: Verifies JWT for v2.
+  Usage: Same as v1, checks and decodes JWT tokens.
+
+- role.middleware.js
+  Purpose: Enforces role-based access for v2.
+  Usage: Same as v1, checks user roles via `MandalMember`.
+
+- validation.middleware.js
+  Purpose: Validates v2 request bodies.
+  Usage: Same as v1, applies Joi schemas.
+
+- error.middleware.js
+  Purpose: Handles v2 errors.
+  Usage: Same as v1, logs and returns standardized error responses.
+
+#### src/api/v2/validators/
+Purpose: Contains v2 Joi schemas, identical to v1 with placeholder comments.
+
+- auth.validator.js
+  Purpose: Defines v2 auth schemas.
+  Usage: Same as v1, validates registration, login, and verification.
+
+- mandal.validator.js
+  Purpose: Defines v2 mandal schemas.
+  Usage: Same as v1, validates mandal creation and updates.
+
+- member.validator.js
+  Purpose: Defines v2 member schema.
+  Usage: Same as v1, validates member addition.
+
+- contribution.validator.js
+  Purpose: Defines v2 contribution schema.
+  Usage: Same as v1, validates contribution payments.
+
+- loan.validator.js
+  Purpose: Defines v2 loan schemas.
+  Usage: Same as v1, validates loan requests and approvals.
+
+## src/domains/
+Purpose: Organizes business logic into domains (auth, mandal, finance) with entities, services, and repositories.
+
+### src/domains/auth/
+Purpose: Handles authentication-related logic.
+
+#### src/domains/auth/entities/
+- user.entity.js
+  Purpose: Defines the User entity class.
+  Usage: Represents a user with properties like id, name, email, mobile, password, and verified status.
+
+#### src/domains/auth/services/
+- auth.service.js
+  Purpose: Implements authentication business logic.
+  Usage: Manages user registration (checks uniqueness, hashes password, sends verification code), email verification (via Redis), and login (issues JWT).
+
+- email.service.js
+  Purpose: Handles email sending.
+  Usage: Sends verification emails using nodemailer and SendGrid.
+
+#### src/domains/auth/repositories/
+- user.repository.js
+  Purpose: Interacts with the User model in the database.
+  Usage: Provides methods for creating, finding, and updating users, ensuring email/mobile uniqueness.
+
+### src/domains/mandal/
+Purpose: Manages mandal and member-related logic.
+
+#### src/domains/mandal/entities/
+- mandal.entity.js
+  Purpose: Defines the Mandal entity class.
+  Usage: Represents a mandal with properties like id, name, creatorUserId, contributionMode, contributionAmount, and interestRate.
+
+- mandalMember.entity.js
+  Purpose: Defines the MandalMember entity class.
+  Usage: Represents a mandal membership with mandalId, userId, and role (admin/member).
+
+#### src/domains/mandal/services/
+- mandal.service.js
+  Purpose: Implements mandal and member business logic.
+  Usage: Handles mandal creation (sets creator as admin), retrieval, updates, deletion, and member management (add, list, remove with uniqueness and role checks).
+
+#### src/domains/mandal/repositories/
+- mandal.repository.js
+  Purpose: Interacts with the Mandal model.
+  Usage: Provides CRUD operations for mandals, ensuring name uniqueness.
+
+- mandalMember.repository.js
+  Purpose: Interacts with the MandalMember model.
+  Usage: Manages member creation, role checking, listing, and deletion, ensuring unique memberships.
+
+### src/domains/finance/
+Purpose: Manages financial operations like contributions and loans.
+
+#### src/domains/finance/entities/
+- contribution.entity.js
+  Purpose: Defines the Contribution entity class.
+  Usage: Represents a contribution with properties like id, mandalId, userId, amountPaid, dueDate, paidDate, and status.
+
+- loan.entity.js
+  Purpose: Defines the Loan entity class.
+  Usage: Represents a loan with properties like id, mandalId, userId, amount, interestRate, duration, and status.
+
+- loanRepayment.entity.js
+  Purpose: Defines the LoanRepayment entity class.
+  Usage: Represents a loan repayment with properties like id, loanId, amount, date, and type.
+
+#### src/domains/finance/services/
+- contribution.service.js
+  Purpose: Implements contribution business logic.
+  Usage: Processes payments via Razorpay, lists contributions, and generates dues via cron jobs, ensuring amount validation and membership checks.
+
+- loan.service.js
+  Purpose: Implements loan business logic.
+  Usage: Manages loan requests, approvals (with interest calculation), repayments, and listing, ensuring proper status transitions.
+
+- payment.service.js
+  Purpose: Handles payment processing.
+  Usage: Creates Razorpay orders for contributions and loan repayments.
+
+#### src/domains/finance/repositories/
+- contribution.repository.js
+  Purpose: Interacts with the Contribution model.
+  Usage: Provides methods for creating and finding contributions by user and mandal.
+
+- loan.repository.js
+  Purpose: Interacts with the Loan model.
+  Usage: Provides CRUD operations for loans, including listing by mandal.
+
+- loanRepayment.repository.js
+  Purpose: Interacts with the LoanRepayment model.
+  Usage: Creates repayment records for loans.
+
+## src/infrastructure/
+Purpose: Contains infrastructure-related code for database, cache, queue, and external services.
+
+### src/infrastructure/database/
+Purpose: Manages database models, migrations, and seeders.
+
+#### src/infrastructure/database/models/
+- user.model.js
+  Purpose: Defines the Sequelize User model.
+  Usage: Maps to the Users table with fields for id, name, email, mobile, password, and verified status.
+
+- mandal.model.js
+  Purpose: Defines the Sequelize Mandal model.
+  Usage: Maps to the Mandals table with fields for id, name, creatorUserId, contributionMode, contributionAmount, and interestRate.
+
+- mandalMember.model.js
+  Purpose: Defines the Sequelize MandalMember model.
+  Usage: Maps to the MandalMembers table with fields for mandalId, userId, and role, with a unique index on mandalId and userId.
+
+- contribution.model.js
+  Purpose: Defines the Sequelize Contribution model.
+  Usage: Maps to the Contributions table with fields for id, mandalId, userId, amountPaid, dueDate, paidDate, and status.
+
+- loan.model.js
+  Purpose: Defines the Sequelize Loan model.
+  Usage: Maps to the Loans table with fields for id, mandalId, userId, amount, interestRate, duration, and status.
+
+- loanRepayment.model.js
+  Purpose: Defines the Sequelize LoanRepayment model.
+  Usage: Maps to the LoanRepayments table with fields for id, loanId, amount, date, and type.
+
+- index.js
+  Purpose: Centralizes Sequelize model definitions and associations.
+  Usage: Defines relationships between User, Mandal, MandalMember, Contribution, Loan, and LoanRepayment models.
+
+#### src/infrastructure/database/migrations/
+Purpose: Contains Sequelize migration scripts for database schema changes.
+
+- 2025082901-create-user.js
+  Purpose: Creates the Users table.
+  Usage: Defines schema for user data with unique email and mobile constraints.
+
+- 2025082902-create-mandal.js
+  Purpose: Creates the Mandals table.
+  Usage: Defines schema for mandals with foreign key to Users.
+
+- 2025082903-create-mandal-member.js
+  Purpose: Creates the MandalMembers table.
+  Usage: Defines schema for memberships with unique index and foreign keys.
+
+- 2025082904-create-contribution.js
+  Purpose: Creates the Contributions table.
+  Usage: Defines schema for contributions with foreign keys to Mandals and Users.
+
+- 2025082905-create-loan.js
+  Purpose: Creates the Loans table.
+  Usage: Defines schema for loans with foreign keys to Mandals and Users.
+
+- 2025082906-create-loan-repayment.js
+  Purpose: Creates the LoanRepayments table.
+  Usage: Defines schema for loan repayments with foreign key to Loans.
+
+#### src/infrastructure/database/seeders/
+Purpose: Contains seed data for initial database population.
+
+- 2025082901-users.js
+  Purpose: Seeds initial user data.
+  Usage: Inserts an admin user with hashed password for testing.
+
+- 2025082902-mandals.js
+  Purpose: Seeds initial mandal and membership data.
+  Usage: Creates a test mandal and assigns the admin user as its admin.
+
+### src/infrastructure/cache/
+- redis.config.js
+  Purpose: Configures Redis client.
+  Usage: Sets up Redis connection for storing verification codes and caching, used in auth service.
+
+### src/infrastructure/queue/
+- bull.config.js
+  Purpose: Configures BullMQ queue for notifications.
+  Usage: Sets up a notification queue with Redis for asynchronous SMS sending.
+
+### src/infrastructure/external/
+- email.provider.js
+  Purpose: Configures nodemailer with SendGrid.
+  Usage: Sends emails for verification codes in the auth service.
+
+- payment.provider.js
+  Purpose: Configures Razorpay client.
+  Usage: Creates payment orders for contributions and loan repayments.
+
+- notification.provider.js
+  Purpose: Configures Twilio client for SMS.
+  Usage: Queues SMS notifications for user, contribution, and loan events via BullMQ.
+
+## src/events/
+Purpose: Manages event-driven architecture for notifications.
+
+- eventEmitter.js
+  Purpose: Sets up Node.js EventEmitter.
+  Usage: Emits events for user registration, verification, contributions, and loans.
+
+#### src/events/events/
+- user.events.js
+  Purpose: Defines user-related event names.
+  Usage: Specifies constants for `USER_REGISTERED` and `USER_VERIFIED` events.
+
+- contribution.events.js
+  Purpose: Defines contribution-related event names.
+  Usage: Specifies constants for `CONTRIBUTION_DUE` and `CONTRIBUTION_PAID` events.
+
+- loan.events.js
+  Purpose: Defines loan-related event names.
+  Usage: Specifies constants for `LOAN_REQUESTED`, `LOAN_APPROVED`, and `LOAN_REPAID` events.
+
+#### src/events/listeners/
+- user.listener.js
+  Purpose: Handles user event notifications.
+  Usage: Listens for `USER_REGISTERED` and `USER_VERIFIED` events, queuing SMS notifications.
+
+- contribution.listener.js
+  Purpose: Handles contribution event notifications.
+  Usage: Listens for `CONTRIBUTION_DUE` and `CONTRIBUTION_PAID` events, queuing SMS notifications.
+
+- loan.listener.js
+  Purpose: Handles loan event notifications.
+  Usage: Listens for `LOAN_REQUESTED`, `LOAN_APPROVED`, and `LOAN_REPAID` events, queuing SMS notifications.
+
+## src/utils/
+Purpose: Contains shared utilities for the application.
+
+- constants.js
+  Purpose: Defines application-wide constants.
+  Usage: Specifies valid `CONTRIBUTION_MODES` (weekly, monthly, yearly).
+
+- helpers.js
+  Purpose: Provides utility functions.
+  Usage: Includes `formatDate` for consistent date formatting.
+
+- logger.js
+  Purpose: Configures Winston logger.
+  Usage: Logs to `logs/2025/August/29.log` (and similar) in JSON format, used across the app for debugging and monitoring.
+
+- error.js
+  Purpose: Defines custom error class.
+  Usage: Creates `AppError` with status and message for standardized error handling.
+
+- cron.js
+  Purpose: Schedules contribution due generation.
+  Usage: Uses `node-cron` to generate weekly, monthly, and yearly contribution dues, triggering `CONTRIBUTION_DUE` events.
+
+## src/config/
+Purpose: Contains configuration files for the application.
+
+- database.config.js
+  Purpose: Configures Sequelize database connection.
+  Usage: Sets up MySQL connection and syncs models, used in `server.js`.
+
+- environment.config.js
+  Purpose: Centralizes environment variable access.
+  Usage: Exports environment variables for use across the app, loaded from `.env`.
+
+- middleware.config.js
+  Purpose: Configures Express middleware.
+  Usage: Sets up JSON and URL-encoded body parsing for the Express app.
+
+- swagger.config.js
+  Purpose: Configures Swagger UI.
+  Usage: Loads `swagger.yaml` for API documentation, served at `/api-docs`.
+
+## src/core/
+Purpose: Contains core application logic and dependency injection.
+
+- container.js
+  Purpose: Sets up Inversify container for dependency injection.
+  Usage: Registers repositories as constants for use in services.
+
+- errorHandler.js
+  Purpose: Global error handler.
+  Usage: Logs errors with Winston and returns standardized error responses, used in `server.js`.
+
+## tests/
+Purpose: Contains test suites for unit, integration, and end-to-end testing.
+
+### tests/unit/
+Purpose: Contains unit tests for services.
+
+- auth.test.js
+  Purpose: Tests authentication service.
+  Usage: Verifies user registration logic with mocked repository.
+
+- mandal.test.js
+  Purpose: Tests mandal service.
+  Usage: Verifies mandal creation logic with mocked repository.
+
+- contribution.test.js
+  Purpose: Tests contribution service.
+  Usage: Verifies payment processing logic with mocked repository.
+
+- loan.test.js
+  Purpose: Tests loan service.
+  Usage: Verifies loan request logic with mocked repository.
+
+### tests/integration/
+Purpose: Contains integration tests for API endpoints.
+
+- auth.integration.test.js
+  Purpose: Tests auth API endpoints.
+  Usage: Verifies registration endpoint with real HTTP requests using Supertest.
+
+- mandal.integration.test.js
+  Purpose: Tests mandal API endpoints.
+  Usage: Verifies mandal creation endpoint with mocked JWT.
+
+- finance.integration.test.js
+  Purpose: Tests finance-related API endpoints.
+  Usage: Verifies contribution payment endpoint with mocked JWT.
+
+### tests/e2e/
+Purpose: Contains end-to-end tests for full user flows.
+
+- api.e2e.test.js
+  Purpose: Tests complete API flows.
+  Usage: Verifies registration and login flow with real HTTP requests.
+
+- flow.e2e.test.js
+  Purpose: Tests end-to-end user flow.
+  Usage: Verifies registration, login, and mandal creation flow.
+
+## docs/
+Purpose: Contains project documentation.
+
+### docs/api-docs/
+- swagger.yaml
+  Purpose: Defines Swagger API specification.
+  Usage: Documents all API endpoints for v1, served via Swagger UI at `/api-docs`.
+
+### docs/guides/
+- setup.md
+  Purpose: Setup guide.
+  Usage: Provides instructions for installing dependencies, running migrations, and starting the server.
+
+- architecture.md
+  Purpose: Architecture overview.
+  Usage: Describes the clean architecture used in the project, covering API, domains, and infrastructure.
+
+## scripts/
+Purpose: Contains shell scripts for deployment and seeding.
+
+- deploy.sh
+  Purpose: Automates Docker and Kubernetes deployment.
+  Usage: Builds Docker image, tags, pushes to registry, and applies Kubernetes manifests.
+
+- seed.sh
+  Purpose: Runs database migrations and seeders.
+  Usage: Automates database setup for development or testing.
+
+## k8s/
+Purpose: Contains Kubernetes manifests for deployment.
+
+- deployment.yaml
+  Purpose: Defines Kubernetes deployment.
+  Usage: Specifies pod replicas, container image, and environment variables for the app.
+
+- service.yaml
+  Purpose: Defines Kubernetes service.
+  Usage: Exposes the app within the cluster via ClusterIP.
+
+- configmap.yaml
+  Purpose: Stores non-sensitive configuration.
+  Usage: Provides environment variables like DB_HOST and NODE_ENV.
+
+- secret.yaml
+  Purpose: Stores sensitive configuration.
+  Usage: Provides base64-encoded secrets like database credentials and API keys.
+
+- ingress.yaml
+  Purpose: Defines Kubernetes ingress.
+  Usage: Routes external traffic to the service, enabling access via a domain.
+
+## logs/
+Purpose: Stores application logs.
+
+### logs/2025/
+### logs/2025/August/
+- 29.log
+  Purpose: Stores daily logs in JSON format.
+  Usage: Generated by Winston logger, used for debugging and monitoring application activity.
+
+# Summary
+The project is structured to ensure modularity, scalability, and maintainability. The `src/api` directories handle RESTful endpoints with validators in `validators/` and route exports in `routes/index.js`. Business logic is encapsulated in `domains/`, with database interactions in `infrastructure/database/`. External services (email, payment, SMS) are abstracted in `infrastructure/external/`. Events and notifications are managed via `events/` and `infrastructure/queue/`. Utilities like logging (to `logs/2025/August/29.log`) and cron jobs are in `utils/`. Tests ensure reliability, and deployment scripts (`Dockerfile`, `docker-compose.yml`, `k8s/`) enable production-ready deployment.

@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mandal-config
+data:
+  NODE_ENV: production
+  DB_HOST: mysql-service
+  DB_NAME: mandal_db
+  REDIS_URL: redis://redis-service:6379

@@ -1,0 +1,58 @@
+openapi: 3.0.0
+info:
+  title: Mandal Backend API
+  version: 1.0.0
+paths:
+  /api/v1/auth/register:
+    post:
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                email: { type: string }
+                mobile: { type: string }
+                password: { type: string }
+      responses:
+        '201': { description: User registered }
+  /api/v1/auth/login:
+    post:
+      summary: Login a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email: { type: string }
+                password: { type: string }
+      responses:
+        '200': { description: Login successful }
+  /api/v1/mandals:
+    post:
+      summary: Create a mandal
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                contributionMode: { type: string, enum: ['weekly', 'monthly', 'yearly'] }
+                contributionAmount: { type: number }
+                interestRate: { type: number }
+      responses:
+        '201': { description: Mandal created }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

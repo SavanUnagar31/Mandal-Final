@@ -1,0 +1,231 @@
+Mandal Backend API Endpoints
+
+# Authentication Endpoints
+- POST /api/v1/auth/register
+  Description: Register a new user with name, email, mobile, and password. Sends verification code.
+  Authentication: None
+  Response: { success: true, data: { userId: number }, message: "Registration successful, verification code sent" }
+  Status: 201 (Created), 400 (Bad Request)
+
+- POST /api/v1/auth/login
+  Description: Login a user with email and password. Returns JWT token.
+  Authentication: None
+  Response: { success: true, data: { token: string }, message: "Login successful" }
+  Status: 200 (OK), 401 (Unauthorized), 403 (Forbidden)
+
+- POST /api/v1/auth/verify
+  Description: Verify user's email with verification code.
+  Authentication: None
+  Response: { success: true, data: user, message: "Email verified" }
+  Status: 200 (OK), 400 (Bad Request), 404 (Not Found)
+
+- POST /api/v2/auth/register
+  Description: [v2] Same as v1, placeholder for future updates.
+  Authentication: None
+  Response: { success: true, data: { userId: number }, message: "Registration successful, verification code sent" }
+  Status: 201 (Created), 400 (Bad Request)
+
+- POST /api/v2/auth/login
+  Description: [v2] Same as v1, placeholder for future updates.
+  Authentication: None
+  Response: { success: true, data: { token: string }, message: "Login successful" }
+  Status: 200 (OK), 401 (Unauthorized), 403 (Forbidden)
+
+- POST /api/v2/auth/verify
+  Description: [v2] Same as v1, placeholder for future updates.
+  Authentication: None
+  Response: { success: true, data: user, message: "Email verified" }
+  Status: 200 (OK), 400 (Bad Request), 404 (Not Found)
+
+# Mandal Endpoints
+- POST /api/v1/mandals
+  Description: Create a new mandal with name, contribution mode, amount, and interest rate.
+  Authentication: JWT required
+  Role: Any authenticated user
+  Response: { success: true, data: mandal, message: "Mandal created" }
+  Status: 201 (Created), 400 (Bad Request), 401 (Unauthorized)
+
+- GET /api/v1/mandals/:id
+  Description: Retrieve a mandal by ID.
+  Authentication: JWT required
+  Role: Member or Admin of the mandal
+  Response: { success: true, data: mandal, message: "Mandal retrieved" }
+  Status: 200 (OK), 401 (Unauthorized), 403 (Forbidden), 404 (Not Found)
+
+- PUT /api/v1/mandals/:id
+  Description: Update a mandal's details.
+  Authentication: JWT required
+  Role: Admin of the mandal
+  Response: { success: true, data: mandal, message: "Mandal updated" }
+  Status: 200 (OK), 400 (Bad Request), 401 (Unauthorized), 403 (Forbidden), 404 (Not Found)
+
+- DELETE /api/v1/mandals/:id
+  Description: Delete a mandal.
+  Authentication: JWT required
+  Role: Admin of the mandal
+  Response: { success: true, data: null, message: "Mandal deleted" }
+  Status: 200 (OK), 401 (Unauthorized), 403 (Forbidden), 404 (Not Found)
+
+- POST /api/v2/mandals
+  Description: [v2] Same as v1, placeholder for future updates.
+  Authentication: JWT required
+  Role: Any authenticated user
+  Response: { success: true, data: mandal, message: "Mandal created" }
+  Status: 201 (Created), 400 (Bad Request), 401 (Unauthorized)
+
+- GET /api/v2/mandals/:id
+  Description: [v2] Same as v1, placeholder for future updates.
+  Authentication: JWT required
+  Role: Member or Admin of the mandal
+  Response: { success: true, data: mandal, message: "Mandal retrieved" }
+  Status: 200 (OK), 401 (Unauthorized), 403 (Forbidden), 404 (Not Found)
+
+- PUT /api/v2/mandals/:id
+  Description: [v2] Same as v1, placeholder for future updates.
+  Authentication: JWT required
+  Role: Admin of the mandal
+  Response: { success: true, data: mandal, message: "Mandal updated" }
+  Status: 200 (OK), 400 (Bad Request), 401 (Unauthorized), 403 (Forbidden), 404 (Not Found)
+
+- DELETE /api/v2/mandals/:id
+  Description: [v2] Same as v1, placeholder for future updates.
+  Authentication: JWT required
+  Role: Admin of the mandal
+  Response: { success: true, data: null, message: "Mandal deleted" }
+  Status: 200 (OK), 401 (Unauthorized), 403 (Forbidden), 404 (Not Found)
+
+# Member Endpoints
+- POST /api/v1/members/:mandalId
+  Description: Add a member to a mandal by user ID.
+  Authentication: JWT required
+  Role: Admin of the mandal
+  Response: { success: true, data: member, message: "Member added" }
+  Status: 200 (OK), 400 (Bad Request), 401 (Unauthorized), 403 (Forbidden), 404 (Not Found)
+
+- GET /api/v1/members/:mandalId
+  Description: List all members of a mandal.
+  Authentication: JWT required
+  Role: Member or Admin of the mandal
+  Response: { success: true, data: members, message: "Members retrieved" }
+  Status: 200 (OK), 401 (Unauthorized), 403 (Forbidden), 404 (Not Found)
+
+- DELETE /api/v1/members/:mandalId/:userId
+  Description: Remove a member from a mandal.
+  Authentication: JWT required
+  Role: Admin of the mandal
+  Response: { success: true, data: null, message: "Member removed" }
+  Status: 200 (OK), 401 (Unauthorized), 403 (Forbidden), 404 (Not Found)
+
+- POST /api/v2/members/:mandalId
+  Description: [v2] Same as v1, placeholder for future updates.
+  Authentication: JWT required
+  Role: Admin of the mandal
+  Response: { success: true, data: member, message: "Member added" }
+  Status: 200 (OK), 400 (Bad Request), 401 (Unauthorized), 403 (Forbidden), 404 (Not Found)
+
+- GET /api/v2/members/:mandalId
+  Description: [v2] Same as v1, placeholder for future updates.
+  Authentication: JWT required
+  Role: Member or Admin of the mandal
+  Response: { success: true, data: members, message: "Members retrieved" }
+  Status: 200 (OK), 401 (Unauthorized), 403 (Forbidden), 404 (Not Found)
+
+- DELETE /api/v2/members/:mandalId/:userId
+  Description: [v2] Same as v1, placeholder for future updates.
+  Authentication: JWT required
+  Role: Admin of the mandal
+  Response: { success: true, data: null, message: "Member removed" }
+  Status: 200 (OK), 401 (Unauthorized), 403 (Forbidden), 404 (Not Found)
+
+# Contribution Endpoints
+- POST /api/v1/contributions/:mandalId/pay
+  Description: Pay a contribution for a mandal.
+  Authentication: JWT required
+  Role: Member of the mandal
+  Response: { success: true, data: payment, message: "Contribution paid" }
+  Status: 200 (OK), 400 (Bad Request), 401 (Unauthorized), 403 (Forbidden), 404 (Not Found)
+
+- GET /api/v1/contributions/:mandalId
+  Description: List contributions for a mandal by the authenticated user.
+  Authentication: JWT required
+  Role: Member of the mandal
+  Response: { success: true, data: contributions, message: "Contributions retrieved" }
+  Status: 200 (OK), 401 (Unauthorized), 403 (Forbidden), 404 (Not Found)
+
+- POST /api/v2/contributions/:mandalId/pay
+  Description: [v2] Same as v1, placeholder for future updates.
+  Authentication: JWT required
+  Role: Member of the mandal
+  Response: { success: true, data: payment, message: "Contribution paid" }
+  Status: 200 (OK), 400 (Bad Request), 401 (Unauthorized), 403 (Forbidden), 404 (Not Found)
+
+- GET /api/v2/contributions/:mandalId
+  Description: [v2] Same as v1, placeholder for future updates.
+  Authentication: JWT required
+  Role: Member of the mandal
+  Response: { success: true, data: contributions, message: "Contributions retrieved" }
+  Status: 200 (OK), 401 (Unauthorized), 403 (Forbidden), 404 (Not Found)
+
+# Loan Endpoints
+- POST /api/v1/loans/:mandalId/request
+  Description: Request a loan for a mandal.
+  Authentication: JWT required
+  Role: Member of the mandal
+  Response: { success: true, data: loan, message: "Loan requested" }
+  Status: 201 (Created), 400 (Bad Request), 401 (Unauthorized), 403 (Forbidden), 404 (Not Found)
+
+- PUT /api/v1/loans/:loanId/approve
+  Description: Approve a loan request with duration.
+  Authentication: JWT required
+  Role: Admin of the mandal
+  Response: { success: true, data: loan, message: "Loan approved" }
+  Status: 200 (OK), 400 (Bad Request), 401 (Unauthorized), 403 (Forbidden), 404 (Not Found)
+
+- POST /api/v1/loans/:loanId/repay
+  Description: Repay a loan amount.
+  Authentication: JWT required
+  Role: Member of the mandal
+  Response: { success: true, data: repayment, message: "Loan repayment processed" }
+  Status: 200 (OK), 400 (Bad Request), 401 (Unauthorized), 403 (Forbidden), 404 (Not Found)
+
+- GET /api/v1/loans/:mandalId
+  Description: List all loans for a mandal.
+  Authentication: JWT required
+  Role: Member of the mandal
+  Response: { success: true, data: loans, message: "Loans retrieved" }
+  Status: 200 (OK), 401 (Unauthorized), 403 (Forbidden), 404 (Not Found)
+
+- POST /api/v2/loans/:mandalId/request
+  Description: [v2] Same as v1, placeholder for future updates.
+  Authentication: JWT required
+  Role: Member of the mandal
+  Response: { success: true, data: loan, message: "Loan requested" }
+  Status: 201 (Created), 400 (Bad Request), 401 (Unauthorized), 403 (Forbidden), 404 (Not Found)
+
+- PUT /api/v2/loans/:loanId/approve
+  Description: [v2] Same as v1, placeholder for future updates.
+  Authentication: JWT required
+  Role: Admin of the mandal
+  Response: { success: true, data: loan, message: "Loan approved" }
+  Status: 200 (OK), 400 (Bad Request), 401 (Unauthorized), 403 (Forbidden), 404 (Not Found)
+
+- POST /api/v2/loans/:loanId/repay
+  Description: [v2] Same as v1, placeholder for future updates.
+  Authentication: JWT required
+  Role: Member of the mandal
+  Response: { success: true, data: repayment, message: "Loan repayment processed" }
+  Status: 200 (OK), 400 (Bad Request), 401 (Unauthorized), 403 (Forbidden), 404 (Not Found)
+
+- GET /api/v2/loans/:mandalId
+  Description: [v2] Same as v1, placeholder for future updates.
+  Authentication: JWT required
+  Role: Member of the mandal
+  Response: { success: true, data: loans, message: "Loans retrieved" }
+  Status: 200 (OK), 401 (Unauthorized), 403 (Forbidden), 404 (Not Found)
+
+# API Documentation
+- GET /api-docs
+  Description: Access Swagger UI for API documentation.
+  Authentication: None
+  Response: HTML Swagger UI
+  Status: 200 (OK)

@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mandal-backend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: mandal-backend
+  template:
+    metadata:
+      labels:
+        app: mandal-backend
+    spec:
+      containers:
+      - name: mandal-backend
+        image: myregistry/mandal-backend:latest
+        envFrom:
+        - configMapRef:
+            name: mandal-config
+        - secretRef:
+            name: mandal-secrets
+        ports:
+        - containerPort: 3000
