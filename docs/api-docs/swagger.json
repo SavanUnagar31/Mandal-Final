@@ -1878,11 +1878,11 @@
           },
           "email": {
             "type": "string",
-            "example": "test@example.com"
+            "example": "savanunagar318@gmail.com"
           },
           "mobile": {
             "type": "string",
-            "example": "9876543210"
+            "example": "7621892194"
           },
           "verified": {
             "type": "boolean",
@@ -1900,11 +1900,11 @@
           },
           "email": {
             "type": "string",
-            "example": "test@example.com"
+            "example": "savanunagar318@gmail.com"
           },
           "mobile": {
             "type": "string",
-            "example": "9876543210"
+            "example": "7621892194"
           },
           "password": {
             "type": "string",
@@ -1918,7 +1918,7 @@
         "properties": {
           "email": {
             "type": "string",
-            "example": "test@example.com"
+            "example": "savanunagar318@gmail.com"
           },
           "password": {
             "type": "string",
@@ -1932,7 +1932,7 @@
         "properties": {
           "email": {
             "type": "string",
-            "example": "test@example.com"
+            "example": "savanunagar318@gmail.com"
           },
           "code": {
             "type": "string",
