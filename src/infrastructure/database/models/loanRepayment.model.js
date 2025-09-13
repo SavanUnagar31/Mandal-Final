@@ -3,12 +3,12 @@ const sequelize = require('../../../config/database.config').sequelize;
 
 const LoanRepayment = sequelize.define('LoanRepayment', {
   id: {
-    type: DataTypes.INTEGER,
-    autoIncrement: true,
+    type: DataTypes.UUID,
+    defaultValue: DataTypes.UUIDV4,
     primaryKey: true,
   },
   loanId: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.UUID,
     allowNull: false,
   },
   amount: {

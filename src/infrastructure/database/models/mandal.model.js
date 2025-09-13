@@ -3,8 +3,8 @@ const sequelize = require('../../../config/database.config').sequelize;
 
 const Mandal = sequelize.define('Mandal', {
   id: {
-    type: DataTypes.INTEGER,
-    autoIncrement: true,
+    type: DataTypes.UUID,
+    defaultValue: DataTypes.UUIDV4,
     primaryKey: true,
   },
   name: {
@@ -12,7 +12,7 @@ const Mandal = sequelize.define('Mandal', {
     allowNull: false,
   },
   creatorUserId: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.UUID,
     allowNull: false,
   },
   contributionMode: {

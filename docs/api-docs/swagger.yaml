@@ -2,57 +2,1450 @@ openapi: 3.0.0
 info:
   title: Mandal Backend API
   version: 1.0.0
+  description: Complete API documentation for the Mandal backend project, covering authentication, mandal management, member management, contributions, and loans.
+servers:
+  - url: http://localhost:3000
+    description: Development server
 paths:
   /api/v1/auth/register:
     post:
       summary: Register a new user
+      tags: [Auth]
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                name: { type: string }
-                email: { type: string }
-                mobile: { type: string }
-                password: { type: string }
+              $ref: '#/components/schemas/RegisterInput'
       responses:
-        '201': { description: User registered }
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      userId:
+                        type: string
+                        format: uuid
+                        example: 123e4567-e89b-12d3-a456-426614174000
+        '400':
+          description: Bad request (e.g., user already exists)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: User already exists
   /api/v1/auth/login:
     post:
       summary: Login a user
+      tags: [Auth]
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                email: { type: string }
-                password: { type: string }
+              $ref: '#/components/schemas/LoginInput'
       responses:
-        '200': { description: Login successful }
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      token:
+                        type: string
+                        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: Invalid credentials
+        '403':
+          description: Email not verified
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: Email not verified
+  /api/v1/auth/verify-email:
+    post:
+      summary: Verify user email
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyEmailInput'
+      responses:
+        '200':
+          description: Email verified successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      userId:
+                        type: string
+                        format: uuid
+                        example: 123e4567-e89b-12d3-a456-426614174000
+        '400':
+          description: Invalid verification code
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: Invalid verification code
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: User not found
   /api/v1/mandals:
     post:
-      summary: Create a mandal
-      security: [{ bearerAuth: [] }]
+      summary: Create a new mandal
+      tags: [Mandal]
+      security:
+        - BearerAuth: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                name: { type: string }
-                contributionMode: { type: string, enum: ['weekly', 'monthly', 'yearly'] }
-                contributionAmount: { type: number }
-                interestRate: { type: number }
+              $ref: '#/components/schemas/MandalInput'
       responses:
-        '201': { description: Mandal created }
+        '201':
+          description: Mandal created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      mandalId:
+                        type: string
+                        format: uuid
+                        example: 123e4567-e89b-12d3-a456-426614174001
+        '400':
+          description: Bad request (e.g., invalid input)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: Invalid input
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: Unauthorized
+    get:
+      summary: Get all mandals
+      tags: [Mandal]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Mandals retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Mandal'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: Unauthorized
+  /api/v1/mandals/{id}:
+    get:
+      summary: Get a mandal by ID
+      tags: [Mandal]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Mandal ID (UUID)
+          example: 123e4567-e89b-12d3-a456-426614174001
+      responses:
+        '200':
+          description: Mandal retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Mandal'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: Unauthorized
+        '403':
+          description: Forbidden (not a member)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: Forbidden
+        '404':
+          description: Mandal not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: Mandal not found
+    put:
+      summary: Update a mandal
+      tags: [Mandal]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Mandal ID (UUID)
+          example: 123e4567-e89b-12d3-a456-426614174001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MandalInput'
+      responses:
+        '200':
+          description: Mandal updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Mandal'
+        '400':
+          description: Bad request (e.g., invalid input)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: Invalid input
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: Unauthorized
+        '403':
+          description: Forbidden (not admin)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: Forbidden
+        '404':
+          description: Mandal not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: Mandal not found
+    delete:
+      summary: Delete a mandal
+      tags: [Mandal]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Mandal ID (UUID)
+          example: 123e4567-e89b-12d3-a456-426614174001
+      responses:
+        '200':
+          description: Mandal deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: Unauthorized
+        '403':
+          description: Forbidden (not admin)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: Forbidden
+        '404':
+          description: Mandal not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: Mandal not found
+  /api/v1/members/{mandalId}:
+    post:
+      summary: Add a member to a mandal
+      tags: [Member]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: mandalId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Mandal ID (UUID)
+          example: 123e4567-e89b-12d3-a456-426614174001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MemberInput'
+      responses:
+        '200':
+          description: Member added successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      memberId:
+                        type: string
+                        format: uuid
+                        example: 123e4567-e89b-12d3-a456-426614174002
+        '400':
+          description: Bad request (e.g., user already member)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: User already a member
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: Unauthorized
+        '403':
+          description: Forbidden (not admin)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: Forbidden
+        '404':
+          description: Mandal or user not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: Mandal or user not found
+    get:
+      summary: List members of a mandal
+      tags: [Member]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: mandalId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Mandal ID (UUID)
+          example: 123e4567-e89b-12d3-a456-426614174001
+      responses:
+        '200':
+          description: Members retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Member'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: Unauthorized
+        '403':
+          description: Forbidden (not member)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: Forbidden
+        '404':
+          description: Mandal not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: Mandal not found
+  /api/v1/members/{mandalId}/{userId}:
+    delete:
+      summary: Remove a member from a mandal
+      tags: [Member]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: mandalId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Mandal ID (UUID)
+          example: 123e4567-e89b-12d3-a456-426614174001
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: User ID (UUID)
+          example: 123e4567-e89b-12d3-a456-426614174000
+      responses:
+        '200':
+          description: Member removed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: Unauthorized
+        '403':
+          description: Forbidden (not admin)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: Forbidden
+        '404':
+          description: Member or mandal not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: Member or mandal not found
+  /api/v1/contributions/{mandalId}/pay:
+    post:
+      summary: Pay a contribution for a mandal
+      tags: [Contribution]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: mandalId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Mandal ID (UUID)
+          example: 123e4567-e89b-12d3-a456-426614174001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContributionInput'
+      responses:
+        '200':
+          description: Contribution paid successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      contributionId:
+                        type: string
+                        format: uuid
+                        example: 123e4567-e89b-12d3-a456-426614174003
+        '400':
+          description: Bad request (e.g., invalid amount)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: Invalid amount
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: Unauthorized
+        '403':
+          description: Forbidden (not member)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: Forbidden
+        '404':
+          description: Mandal not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: Mandal not found
+  /api/v1/contributions/{mandalId}:
+    get:
+      summary: List contributions for a mandal
+      tags: [Contribution]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: mandalId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Mandal ID (UUID)
+          example: 123e4567-e89b-12d3-a456-426614174001
+      responses:
+        '200':
+          description: Contributions retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Contribution'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: Unauthorized
+        '403':
+          description: Forbidden (not member)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: Forbidden
+        '404':
+          description: Mandal not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: Mandal not found
+  /api/v1/loans/{mandalId}/request:
+    post:
+      summary: Request a loan for a mandal
+      tags: [Loan]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: mandalId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Mandal ID (UUID)
+          example: 123e4567-e89b-12d3-a456-426614174001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoanInput'
+      responses:
+        '201':
+          description: Loan requested successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      loanId:
+                        type: string
+                        format: uuid
+                        example: 123e4567-e89b-12d3-a456-426614174004
+        '400':
+          description: Bad request (e.g., invalid amount)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: Invalid amount
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: Unauthorized
+        '403':
+          description: Forbidden (not member)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: Forbidden
+        '404':
+          description: Mandal not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: Mandal not found
+  /api/v1/loans/{loanId}/approve:
+    put:
+      summary: Approve a loan
+      tags: [Loan]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: loanId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Loan ID (UUID)
+          example: 123e4567-e89b-12d3-a456-426614174004
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoanApproveInput'
+      responses:
+        '200':
+          description: Loan approved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Loan'
+        '400':
+          description: Bad request (e.g., invalid duration)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: Invalid duration
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: Unauthorized
+        '403':
+          description: Forbidden (not admin)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: Forbidden
+        '404':
+          description: Loan not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: Loan not found
+  /api/v1/loans/{loanId}/repay:
+    post:
+      summary: Repay a loan
+      tags: [Loan]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: loanId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Loan ID (UUID)
+          example: 123e4567-e89b-12d3-a456-426614174004
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoanRepayInput'
+      responses:
+        '200':
+          description: Loan repaid successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/LoanRepayment'
+        '400':
+          description: Bad request (e.g., invalid amount)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: Invalid amount
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: Unauthorized
+        '403':
+          description: Forbidden (not member)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: Forbidden
+        '404':
+          description: Loan not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: Loan not found
+  /api/v1/loans/{mandalId}:
+    get:
+      summary: List loans for a mandal
+      tags: [Loan]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: mandalId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Mandal ID (UUID)
+          example: 123e4567-e89b-12d3-a456-426614174001
+      responses:
+        '200':
+          description: Loans retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Loan'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: Unauthorized
+        '403':
+          description: Forbidden (not member)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: Forbidden
+        '404':
+          description: Mandal not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: Mandal not found
 components:
   securitySchemes:
-    bearerAuth:
+    BearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 123e4567-e89b-12d3-a456-426614174000
+        name:
+          type: string
+          example: Test User
+        email:
+          type: string
+          example: test@example.com
+        mobile:
+          type: string
+          example: 9876543210
+        verified:
+          type: boolean
+          example: false
+    RegisterInput:
+      type: object
+      required:
+        - name
+        - email
+        - mobile
+        - password
+      properties:
+        name:
+          type: string
+          example: Test User
+        email:
+          type: string
+          example: test@example.com
+        mobile:
+          type: string
+          example: 9876543210
+        password:
+          type: string
+          example: password123
+    LoginInput:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          example: test@example.com
+        password:
+          type: string
+          example: password123
+    VerifyEmailInput:
+      type: object
+      required:
+        - email
+        - code
+      properties:
+        email:
+          type: string
+          example: test@example.com
+        code:
+          type: string
+          example: 123456
+    Mandal:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 123e4567-e89b-12d3-a456-426614174001
+        name:
+          type: string
+          example: Test Mandal
+        contributionMode:
+          type: string
+          enum: [weekly, monthly, yearly]
+          example: monthly
+        contributionAmount:
+          type: number
+          example: 1000
+        interestRate:
+          type: number
+          example: 5
+        creatorUserId:
+          type: string
+          format: uuid
+          example: 123e4567-e89b-12d3-a456-426614174000
+    MandalInput:
+      type: object
+      required:
+        - name
+        - contributionMode
+        - contributionAmount
+        - interestRate
+      properties:
+        name:
+          type: string
+          example: Test Mandal
+        contributionMode:
+          type: string
+          enum: [weekly, monthly, yearly]
+          example: monthly
+        contributionAmount:
+          type: number
+          example: 1000
+        interestRate:
+          type: number
+          example: 5
+    Member:
+      type: object
+      properties:
+        mandalId:
+          type: string
+          format: uuid
+          example: 123e4567-e89b-12d3-a456-426614174001
+        userId:
+          type: string
+          format: uuid
+          example: 123e4567-e89b-12d3-a456-426614174000
+        role:
+          type: string
+          enum: [admin, member]
+          example: member
+    MemberInput:
+      type: object
+      required:
+        - userId
+      properties:
+        userId:
+          type: string
+          format: uuid
+          example: 123e4567-e89b-12d3-a456-426614174000
+    Contribution:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 123e4567-e89b-12d3-a456-426614174003
+        mandalId:
+          type: string
+          format: uuid
+          example: 123e4567-e89b-12d3-a456-426614174001
+        userId:
+          type: string
+          format: uuid
+          example: 123e4567-e89b-12d3-a456-426614174000
+        amountPaid:
+          type: number
+          example: 1000
+        dueDate:
+          type: string
+          format: date-time
+          example: 2025-10-01T00:00:00Z
+        paidDate:
+          type: string
+          format: date-time
+          example: 2025-10-01T00:00:00Z
+        status:
+          type: string
+          enum: [pending, paid, overdue]
+          example: paid
+    ContributionInput:
+      type: object
+      required:
+        - amount
+      properties:
+        amount:
+          type: number
+          example: 1000
+    Loan:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 123e4567-e89b-12d3-a456-426614174004
+        mandalId:
+          type: string
+          format: uuid
+          example: 123e4567-e89b-12d3-a456-426614174001
+        userId:
+          type: string
+          format: uuid
+          example: 123e4567-e89b-12d3-a456-426614174000
+        amount:
+          type: number
+          example: 5000
+        interestRate:
+          type: number
+          example: 5
+        durationMonths:
+          type: integer
+          example: 12
+        startDate:
+          type: string
+          format: date-time
+          example: 2025-10-01T00:00:00Z
+        endDate:
+          type: string
+          format: date-time
+          example: 2026-10-01T00:00:00Z
+        totalPayable:
+          type: number
+          example: 5500
+        repaidAmount:
+          type: number
+          example: 1000
+        status:
+          type: string
+          enum: [requested, approved, active, repaid, overdue]
+          example: active
+    LoanInput:
+      type: object
+      required:
+        - amount
+      properties:
+        amount:
+          type: number
+          example: 5000
+    LoanApproveInput:
+      type: object
+      required:
+        - duration
+      properties:
+        duration:
+          type: integer
+          example: 12
+    LoanRepayment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 123e4567-e89b-12d3-a456-426614174005
+        loanId:
+          type: string
+          format: uuid
+          example: 123e4567-e89b-12d3-a456-426614174004
+        amount:
+          type: number
+          example: 1000
+        date:
+          type: string
+          format: date-time
+          example: 2025-10-01T00:00:00Z
+        type:
+          type: string
+          enum: [principal, interest]
+          example: principal
+    LoanRepayInput:
+      type: object
+      required:
+        - amount
+      properties:
+        amount:
+          type: number
+          example: 1000

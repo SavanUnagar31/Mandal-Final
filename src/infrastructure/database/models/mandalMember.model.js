@@ -3,11 +3,11 @@ const sequelize = require('../../../config/database.config').sequelize;
 
 const MandalMember = sequelize.define('MandalMember', {
   mandalId: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.UUID,
     allowNull: false,
   },
   userId: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.UUID,
     allowNull: false,
   },
   role: {
