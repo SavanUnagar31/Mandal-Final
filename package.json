@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
+    "start": "nodemon server.js",
     "test": "jest --setupFilesAfterEnv ./tests/setup.js --detectOpenHandles --forceExit",
     "migrate": "sequelize-cli db:migrate",
     "seed": "sequelize-cli db:seed:all"
@@ -20,6 +20,7 @@
     "mysql2": "^3.14.3",
     "node-cron": "^3.0.3",
     "nodemailer": "^6.10.1",
+    "nodemon": "^3.1.10",
     "razorpay": "^2.9.6",
     "redis": "^4.7.1",
     "sequelize": "^6.37.7",

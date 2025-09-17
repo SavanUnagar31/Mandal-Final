@@ -38,6 +38,7 @@ const register = async ({ name, email, mobile, password }) => {
 const verifyEmail = async (email, code) => {
   try {
     const user = await userRepo.findByEmail(email);
+    console.log({user});
     if (!user) throw new AppError(404, 'User not found');
     const storedCode = await redis.get(`verify:${user.id}`);
     if (storedCode !== code) throw new AppError(400, 'Invalid verification code');
