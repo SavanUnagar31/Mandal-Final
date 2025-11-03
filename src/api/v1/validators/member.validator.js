@@ -1,7 +1,7 @@
 const Joi = require('joi');
 
 const addMemberSchema = Joi.object({
-  userId: Joi.number().integer().positive().required(),
+  userId: Joi.string().guid({ version: 'uuidv4' }).required(),
 });
 
 module.exports = { addMemberSchema };

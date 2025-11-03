@@ -6,6 +6,17 @@ const userRepo = require('../../auth/repositories/user.repository');
 const AppError = require('../../../utils/error');
 const logger = require('../../../utils/logger');
 
+const getAll = async () => {
+  try {
+    const mandals = await mandalRepo.findAll();
+    logger.info('All mandals retrieved successfully');
+    return mandals.map(mandal => new Mandal(mandal));
+  } catch (err) {
+    logger.error('Error getting all mandals', { error: err.message, stack: err.stack });
+    throw err;
+  }
+};
+
 const create = async (data, userId) => {
   try {
     const existing = await mandalRepo.findByName(data.name);
@@ -92,4 +103,4 @@ const removeMember = async (mandalId, userId) => {
   }
 };
 
-module.exports = { create, get, update, deleteMandal, addMember, listMembers, removeMember };
+module.exports = { create, get, update, deleteMandal, addMember, listMembers, removeMember, getAll };

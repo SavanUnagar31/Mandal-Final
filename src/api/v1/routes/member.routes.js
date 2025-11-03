@@ -7,7 +7,7 @@ const { validate } = require('../middlewares/validation.middleware');
 const { addMemberSchema } = require('../validators/member.validator');
 
 router.post('/:mandalId', authMiddleware, roleMiddleware('admin'), validate(addMemberSchema), memberController.add);
-router.get('/:mandalId', authMiddleware, roleMiddleware('member'), memberController.list);
+router.get('/:mandalId', authMiddleware, memberController.list);
 router.delete('/:mandalId/:userId', authMiddleware, roleMiddleware('admin'), memberController.remove);
 
 module.exports = router;

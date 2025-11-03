@@ -7,6 +7,7 @@ const { validate } = require('../middlewares/validation.middleware');
 const { createMandalSchema, updateMandalSchema } = require('../validators/mandal.validator');
 
 router.post('/', authMiddleware, validate(createMandalSchema), mandalController.create);
+router.get('/', authMiddleware, mandalController.getAll);
 router.get('/:id', authMiddleware, roleMiddleware('member'), mandalController.get);
 router.put('/:id', authMiddleware, roleMiddleware('admin'), validate(updateMandalSchema), mandalController.update);
 router.delete('/:id', authMiddleware, roleMiddleware('admin'), mandalController.deleteMandal);

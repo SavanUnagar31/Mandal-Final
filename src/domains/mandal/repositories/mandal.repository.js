@@ -13,6 +13,17 @@ const create = async (data) => {
   }
 };
 
+const findAll = async () => {
+  try {
+    const mandals = await Mandal.findAll();
+    logger.info('Mandal repository findAll successful');
+    return mandals;
+  } catch (err) {
+    logger.error('Error in mandal repository findAll', { error: err.message, stack: err.stack });
+    throw err;
+  }
+};
+
 const findById = async (id) => {
   try {
     const mandal = await Mandal.findByPk(id);
@@ -59,4 +70,4 @@ const deleteMandal = async (id) => {
   }
 };
 
-module.exports = { create, findById, findByName, update, deleteMandal };
+module.exports = { create, findById, findByName, update, deleteMandal, findAll };
