@@ -13,7 +13,7 @@ The following is a complete directory structure of the Mandal backend project, i
 
 - .env
   Purpose: Stores environment-specific configuration variables.
-  Usage: Contains sensitive data like database credentials, JWT secret, and API keys for SendGrid, Razorpay, Twilio, and Redis. Loaded by `dotenv` for secure configuration.
+  Usage: Contains sensitive data like database credentials, JWT secret, and API keys for Gmail, Razorpay, Twilio, and Redis. Loaded by `dotenv` for secure configuration.
 
 - .env.example
   Purpose: Template for `.env` file with placeholder values.
@@ -249,7 +249,7 @@ Purpose: Handles authentication-related logic.
 
 - email.service.js
   Purpose: Handles email sending.
-  Usage: Sends verification emails using nodemailer and SendGrid.
+  Usage: Sends verification emails using nodemailer and Gmail.
 
 #### src/domains/auth/repositories/
 - user.repository.js
@@ -409,7 +409,7 @@ Purpose: Contains seed data for initial database population.
 
 ### src/infrastructure/external/
 - email.provider.js
-  Purpose: Configures nodemailer with SendGrid.
+  Purpose: Configures nodemailer with Gmail.
   Usage: Sends emails for verification codes in the auth service.
 
 - payment.provider.js

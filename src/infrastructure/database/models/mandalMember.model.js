@@ -4,6 +4,7 @@ const sequelize = require('../../../config/database.config').sequelize;
 const MandalMember = sequelize.define('MandalMember', {
   mandalId: {
     type: DataTypes.UUID,
+    defaultValue: DataTypes.UUIDV4,
     allowNull: false,
   },
   userId: {

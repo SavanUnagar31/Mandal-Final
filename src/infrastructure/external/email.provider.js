@@ -2,19 +2,30 @@
 const nodemailer = require('nodemailer');
 const logger = require('../../utils/logger');
 
-const { SENDGRID_API_KEY } = process.env;
+const { gmailUser, gmailPass } = require('../../config/environment.config');
 
-if (!SENDGRID_API_KEY) {
-  logger.error('SENDGRID_API_KEY is not set in .env');
-  throw new Error('SENDGRID_API_KEY is required');
+if (!gmailUser || !gmailPass) {
+  logger.error('GMAIL_USER or GMAIL_PASS is missing in .env');
+  throw new Error('GMAIL_USER and GMAIL_PASS are required');
 }
 
 const transporter = nodemailer.createTransport({
-  service: 'SendGrid',
+  host: "smtp.gmail.com",
+  port: 587,
+  secure: false, // TLS
   auth: {
-    user: 'apikey',
-    pass: SENDGRID_API_KEY,
-  },
+    user: gmailUser,
+    pass: gmailPass
+  }
+});
+
+// Optional: verify SMTP connection on startup
+transporter.verify((error, success) => {
+  if (error) {
+    logger.error("Gmail SMTP Connection Failed", { error: error.message });
+  } else {
+    logger.info("Gmail SMTP Connected Successfully");
+  }
 });
 
 module.exports = transporter;

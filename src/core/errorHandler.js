@@ -7,6 +7,6 @@ module.exports = (err, req, res, next) => {
     const message = err.message || 'Internal server error';
     res.status(status).json({ success: false, error: message });
   } catch (error) {
-    console.log({ error });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 };
