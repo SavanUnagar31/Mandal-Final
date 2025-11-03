@@ -2,9 +2,13 @@ const { DataTypes } = require('sequelize');
 const sequelize = require('../../../config/database.config').sequelize;
 
 const MandalMember = sequelize.define('MandalMember', {
-  mandalId: {
+  id: {
     type: DataTypes.UUID,
     defaultValue: DataTypes.UUIDV4,
+    primaryKey: true,
+  },
+  mandalId: {
+    type: DataTypes.UUID,
     allowNull: false,
   },
   userId: {

@@ -48,4 +48,14 @@ const deleteMandal = async (req, res, next) => {
   }
 };
 
-module.exports = { create, get, update, deleteMandal };
+const getAll = async (req, res, next) => {
+  try {
+    const mandals = await mandalService.getAll();
+    res.status(200).json({ success: true, data: mandals, message: 'Mandals retrieved' });
+  } catch (err) {
+    logger.error('Error in mandal getAll controller', { error: err.message, stack: err.stack });
+    next(new AppError(err.statusCode || 500, err.message));
+  }
+};
+
+module.exports = { create, get, update, deleteMandal, getAll };
