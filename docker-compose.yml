@@ -12,7 +12,8 @@ services:
       - DB_USER=root
       - DB_PASSWORD=password
       - REDIS_URL=redis://redis:6379
-      - SENDGRID_API_KEY=SG.your_valid_sendgrid_api_key
+      - EMAIL_USER=${GMAIL_USER}
+      - EMAIL_PASS=${GMAIL_PASS}
       - JWT_SECRET=your_jwt_secret
     depends_on:
       - mysql
