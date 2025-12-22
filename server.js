@@ -6,6 +6,11 @@ const fs = require('fs');
 const app = express();
 const logger = require('./src/utils/logger');
 const { connectDB } = require('./src/config/database.config');
+const { connect } = require('./src/infrastructure/cache/redis.config');
+(async () => {
+  await connect();
+})();
+
 const errorHandler = require('./src/core/errorHandler');
 require('./src/utils/cron');
 
