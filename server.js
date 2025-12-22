@@ -20,6 +20,15 @@ app.use((req, res, next) => {
   next();
 });
 
+app.get("/", (req, res) => {
+  res.send({
+    message: "Welcome to the API",
+    version: "1.0.0",
+    status: "running",
+    timestamp: new Date().toISOString(),
+  });
+});
+
 const v1Routes = require("./src/api/v1/routes");
 app.use("/api/v1", v1Routes);
 
