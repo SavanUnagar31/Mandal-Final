@@ -586,6 +586,10 @@ Purpose: Contains shell scripts for deployment and seeding.
   Purpose: Automates Docker and Kubernetes deployment.
   Usage: Builds Docker image, tags, pushes to registry, and applies Kubernetes manifests.
 
+- backup-db.sh
+  Purpose: Automates MySQL database backup.
+  Usage: Loads credentials from .env, exports database schema/data via mysqldump, and compresses the output dump file.
+
 - seed.sh
   Purpose: Runs database migrations and seeders.
   Usage: Automates database setup for development or testing.

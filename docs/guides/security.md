@@ -89,3 +89,29 @@ Keeping application secrets (API keys, database credentials, mailing passwords) 
     - secretRef:
         name: mandal-secrets
   ```
+
+---
+
+## 6. Database Security (Access Control, Query Security, Backups)
+
+To safeguard critical transactional financial tables, the system maintains security at the database connection, query execution, and data recovery levels.
+
+### A. Access Control
+- **Environment Isolation**: Database credentials (`DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_HOST`) are never hardcoded and are loaded strictly from the environment context.
+- **Least Privilege Principle**: In production environments, database users are restricted to standard DML commands (`SELECT`, `INSERT`, `UPDATE`, `DELETE`) for security. DDL permissions are reserved strictly for migrations during deployments.
+
+### B. Query Security
+- **Sequelize ORM Parameterization**: By avoiding raw queries and using Sequelize syntax (e.g. `User.findOne()`), all queries are parameterized automatically by the `mysql2` driver. This prevents attackers from escaping queries and executing arbitrary injected scripts.
+- **Prevention of Raw SQL Execution**: The application avoids passing direct string concatenations or custom variables into raw SQL executions, assuring that query structures are static and input-bound.
+
+### C. Database Backups
+- **Automated Backup Script**: An automated script is provided under `scripts/backup-db.sh`.
+- **Functionality**:
+  - Automatically loads database credentials (`DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`) from the local `.env` configuration.
+  - Generates a timestamped SQL dump (`.sql` format) using `mysqldump`.
+  - Automatically compresses the SQL dump using `gzip` to save storage space.
+- **Scheduling**: Can be automated in production environments via a Linux cron job:
+  ```bash
+  0 2 * * * /bin/bash /path/to/project/scripts/backup-db.sh >> /var/log/db_backup.log 2>&1
+  ```
+  *(Schedules a compressed backup daily at 2:00 AM).*
