@@ -1,8 +1,11 @@
 // Mandal-Final/tests/setup.js
+require('dotenv').config();
 const { sequelize } = require('../src/config/database.config');
+require('../src/infrastructure/database/models'); // Ensure all models and associations are registered
 const { client, disconnect: disconnectRedis } = require('../src/infrastructure/cache/redis.config');
 const { stopCron } = require('../src/utils/cron');
 const logger = require('../src/utils/logger');
+const { notificationQueue } = require('../src/infrastructure/queue/bull.config');
 
 beforeAll(async () => {
   try {
@@ -19,6 +22,7 @@ afterAll(async () => {
   try {
     await sequelize.close();
     await disconnectRedis();
+    await notificationQueue.close();
     stopCron();
     logger.info('Test cleanup completed');
   } catch (error) {

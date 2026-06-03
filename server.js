@@ -35,12 +35,11 @@ app.use("/api/v1", v1Routes);
 const v2Routes = require("./src/api/v2/routes");
 app.use("/api/v2", v2Routes);
 
+const { apiBaseUrl } = require("./src/config/environment.config");
+
 const swaggerFile = fs.readFileSync("./docs/api-docs/swagger.yaml", "utf8");
 
-const serverUrl =
-  process.env.NODE_ENV === "development"
-    ? process.env.API_BASE_URL || "https://mandal.growshadow.com"
-    : process.env.API_BASE_URL || "http://localhost:3000";
+const serverUrl = apiBaseUrl || "";
 
 const swaggerDocument = YAML.parse(
   swaggerFile.replace("${SERVER_URL}", serverUrl)
@@ -50,11 +49,15 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 app.use(errorHandler);
 
-connectDB()
-  .then(() => {
-    const PORT = process.env.PORT || 3000;
-    app.listen(PORT, () => logger.info(`Server running on port ${PORT}`));
-  })
-  .catch((err) => {
-    logger.error(`Failed to start server: ${err.message}`);
-  });
+if (process.env.NODE_ENV !== "test") {
+  connectDB()
+    .then(() => {
+      const PORT = process.env.PORT || 3000;
+      app.listen(PORT, () => logger.info(`Server running on port ${PORT}`));
+    })
+    .catch((err) => {
+      logger.error(`Failed to start server: ${err.message}`);
+    });
+}
+
+module.exports = app;

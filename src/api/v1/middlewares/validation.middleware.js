@@ -6,7 +6,13 @@ const validate = (schema) => async (req, res, next) => {
     await schema.validateAsync(req.body, { abortEarly: false });
     next();
   } catch (error) {
-    next(new AppError(400, error.details.map(err => err.message).join(', ')));
+    const details = error.details ? error.details.map(err => ({
+      message: err.message,
+      path: err.path,
+      type: err.type
+    })) : [];
+    const message = error.details ? error.details.map(err => err.message).join(', ') : error.message;
+    next(new AppError(400, message, 'VALIDATION_ERROR', details));
   }
 };
 

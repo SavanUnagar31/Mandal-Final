@@ -6,6 +6,9 @@ const MandalMember = require('./mandalMember.model');
 const Contribution = require('./contribution.model');
 const Loan = require('./loan.model');
 const LoanRepayment = require('./loanRepayment.model');
+const UserRole = require('./userRole.model');
+const UserOtp = require('./userOtp.model');
+const UserSession = require('./userSession.model');
 
 // Associations
 User.hasMany(Mandal, { foreignKey: 'creatorUserId' });
@@ -29,4 +32,25 @@ Loan.belongsTo(User, { foreignKey: 'userId' });
 Loan.hasMany(LoanRepayment, { foreignKey: 'loanId' });
 LoanRepayment.belongsTo(Loan, { foreignKey: 'loanId' });
 
-module.exports = { sequelize, Op, User, Mandal, MandalMember, Contribution, Loan, LoanRepayment };
+User.hasMany(UserRole, { foreignKey: 'userId' });
+UserRole.belongsTo(User, { foreignKey: 'userId' });
+
+User.hasMany(UserOtp, { foreignKey: 'userId' });
+UserOtp.belongsTo(User, { foreignKey: 'userId' });
+
+User.hasMany(UserSession, { foreignKey: 'userId' });
+UserSession.belongsTo(User, { foreignKey: 'userId' });
+
+module.exports = {
+  sequelize,
+  Op,
+  User,
+  Mandal,
+  MandalMember,
+  Contribution,
+  Loan,
+  LoanRepayment,
+  UserRole,
+  UserOtp,
+  UserSession
+};

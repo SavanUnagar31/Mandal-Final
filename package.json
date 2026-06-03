@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "nodemon server.js",
     "start": "node server.js",
-    "test": "jest --setupFilesAfterEnv ./tests/setup.js --detectOpenHandles --forceExit",
+    "test": "jest --setupFilesAfterEnv ./tests/setup.js --runInBand --detectOpenHandles --forceExit",
     "migrate": "sequelize-cli db:migrate",
     "seed": "sequelize-cli db:seed:all"
   },

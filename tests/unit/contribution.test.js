@@ -1,12 +1,13 @@
+jest.mock('../../src/domains/mandal/repositories/mandal.repository');
+jest.mock('../../src/domains/mandal/repositories/mandalMember.repository');
+jest.mock('../../src/domains/finance/services/payment.service');
+jest.mock('../../src/domains/finance/repositories/contribution.repository');
+
 const contributionService = require('../../src/domains/finance/services/contribution.service');
 const paymentService = require('../../src/domains/finance/services/payment.service');
 const mandalRepo = require('../../src/domains/mandal/repositories/mandal.repository');
 const mandalMemberRepo = require('../../src/domains/mandal/repositories/mandalMember.repository');
 const contributionRepo = require('../../src/domains/finance/repositories/contribution.repository');
-jest.mock('../../src/domains/mandal/repositories/mandal.repository');
-jest.mock('../../src/domains/mandal/repositories/mandalMember.repository');
-jest.mock('../../src/domains/finance/services/payment.service');
-jest.mock('../../src/domains/finance/repositories/contribution.repository');
 
 describe('Contribution Service', () => {
   it('should process payment', async () => {

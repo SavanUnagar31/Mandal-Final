@@ -6,11 +6,17 @@ const bcrypt = require('bcrypt');
 
 const findByEmailOrMobile = async (email, mobile) => {
   try {
-    const user = await User.findOne({
-      where: {
-        [Op.or]: [{ email }, { mobile }]
-      },
-    });
+    const where = {};
+    if (email && mobile) {
+      where[Op.or] = [{ email }, { mobile }];
+    } else if (email) {
+      where.email = email;
+    } else if (mobile) {
+      where.mobile = mobile;
+    } else {
+      return null;
+    }
+    const user = await User.findOne({ where });
     return user;
   } catch (error) {
     logger.error('Error in findByEmailOrMobile', { error: error.message, stack: error.stack });
@@ -28,14 +34,35 @@ const findByEmail = async (email) => {
   }
 };
 
-const create = async ({ name, email, mobile, password }) => {
+const findByMobile = async (mobile) => {
   try {
-    const hashedPassword = await bcrypt.hash(password, 10); // Hash password
-    const user = await User.create({ name, email, mobile, password: hashedPassword });
-    logger.info('User created successfully', { userId: user.id, email });
+    const user = await User.findOne({ where: { mobile } });
     return user;
   } catch (error) {
-    logger.error('Error creating user', { email, error: error.message, stack: error.stack });
+    logger.error('Error in findByMobile', { error: error.message, stack: error.stack });
+    throw error;
+  }
+};
+
+const create = async ({ name, email, mobile, password, address, latitude, longitude }) => {
+  try {
+    const hashedPassword = password ? await bcrypt.hash(password, 10) : null;
+    const user = await User.create({
+      name,
+      email: email || null,
+      mobile,
+      passwordHash: hashedPassword,
+      isMobileVerified: false,
+      isPasswordSet: !!password,
+      status: 'ACTIVE',
+      address: address || null,
+      latitude: latitude || null,
+      longitude: longitude || null,
+    });
+    logger.info('User created successfully', { userId: user.id, mobile });
+    return user;
+  } catch (error) {
+    logger.error('Error creating user', { mobile, error: error.message, stack: error.stack });
     throw error;
   }
 };
@@ -52,7 +79,19 @@ const update = async (id, data) => {
 };
 
 const findById = async (id) => {
-  return await User.findByPk(id);
+  try {
+    return await User.findByPk(id);
+  } catch (error) {
+    logger.error('Error in findById', { error: error.message, stack: error.stack });
+    throw error;
+  }
 };
 
-module.exports = { findByEmailOrMobile, findByEmail, create, update, findById };
+module.exports = {
+  findByEmailOrMobile,
+  findByEmail,
+  findByMobile,
+  create,
+  update,
+  findById,
+};

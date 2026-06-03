@@ -1,8 +1,9 @@
+jest.mock('../../src/domains/mandal/repositories/mandal.repository');
+jest.mock('../../src/domains/finance/repositories/loan.repository');
+
 const loanService = require('../../src/domains/finance/services/loan.service');
 const mandalRepo = require('../../src/domains/mandal/repositories/mandal.repository');
 const loanRepo = require('../../src/domains/finance/repositories/loan.repository');
-jest.mock('../../src/domains/mandal/repositories/mandal.repository');
-jest.mock('../../src/domains/finance/repositories/loan.repository');
 
 describe('Loan Service', () => {
   it('should request a loan', async () => {

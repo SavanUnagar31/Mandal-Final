@@ -7,7 +7,7 @@ const create = async (req, res, next) => {
     const data = req.body;
     const userId = req.user.id;
     const mandal = await mandalService.create(data, userId);
-    res.status(201).json({ success: true, data: mandal, message: 'Mandal created' });
+    res.status(201).json({ success: true, data: { ...mandal, mandalId: mandal.id }, message: 'Mandal created' });
   } catch (err) {
     logger.error('Error in mandal create controller', { error: err.message, stack: err.stack });
     next(new AppError(err.statusCode || 500, err.message));

@@ -12,4 +12,5 @@ module.exports = {
   twilioToken: process.env.TWILIO_TOKEN,
   twilioPhone: process.env.TWILIO_PHONE,
   redisUrl: process.env.REDIS_URL,
+  apiBaseUrl: process.env.API_BASE_URL,
 };
