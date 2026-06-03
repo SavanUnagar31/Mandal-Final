@@ -571,6 +571,14 @@ Purpose: Contains project documentation.
   Purpose: Architecture overview.
   Usage: Describes the clean architecture used in the project, covering API, domains, and infrastructure.
 
+- auth.md
+  Purpose: Authentication & Authorization guide.
+  Usage: Describes password security, JWT usage, RBAC layers, SMS OTP MFA flows, and session management.
+
+- security.md
+  Purpose: Input Validation & Data Security guide.
+  Usage: Explains Joi schemas, SQL Injection prevention using Sequelize parameterized queries, XSS protection, and secrets management.
+
 ## scripts/
 Purpose: Contains shell scripts for deployment and seeding.
 

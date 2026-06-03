@@ -5,6 +5,7 @@ const { randomUUID } = require('crypto');
 const { jwtSecret } = require('../../../config/environment.config');
 const { UserRole, UserOtp, UserSession } = require('../../../infrastructure/database/models');
 const AppError = require('../../../utils/error');
+const cacheService = require('../../../infrastructure/cache/cache.service');
 const logger = require('../../../utils/logger');
 const { sendSMS } = require('../../../infrastructure/external/notification.provider');
 
@@ -194,9 +195,13 @@ const login = async (mobile, password) => {
       throw new AppError(403, 'Mobile not verified', 'USER_UNVERIFIED');
     }
 
-    // Load roles
-    const userRoles = await UserRole.findAll({ where: { userId: user.id } });
-    const roles = userRoles.map(ur => ur.role);
+    // Load roles from cache/DB
+    let roles = await cacheService.getUserRoles(user.id);
+    if (!roles) {
+      const userRoles = await UserRole.findAll({ where: { userId: user.id } });
+      roles = userRoles.map(ur => ur.role);
+      await cacheService.setUserRoles(user.id, roles);
+    }
 
     // Tokens
     const accessToken = jwt.sign(
@@ -266,6 +271,7 @@ const register = async ({ name, mobile, email, address, latitude, longitude }) =
       userId: user.id,
       role: 'MANDAL_OWNER',
     });
+    await cacheService.invalidateUserRoles(user.id);
 
     // Send OTP
     const otpData = await sendOtp(mobile, 'register');
@@ -288,8 +294,12 @@ const me = async (userId) => {
       throw new AppError(404, 'User not found', 'USER_NOT_FOUND');
     }
 
-    const userRoles = await UserRole.findAll({ where: { userId } });
-    const roles = userRoles.map(ur => ur.role);
+    let roles = await cacheService.getUserRoles(userId);
+    if (!roles) {
+      const userRoles = await UserRole.findAll({ where: { userId } });
+      roles = userRoles.map(ur => ur.role);
+      await cacheService.setUserRoles(userId, roles);
+    }
 
     return {
       id: user.id,
