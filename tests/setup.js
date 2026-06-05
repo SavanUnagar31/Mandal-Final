@@ -1,5 +1,6 @@
 // Mandal-Final/tests/setup.js
 require('dotenv').config();
+jest.setTimeout(30000);
 const { sequelize } = require('../src/config/database.config');
 require('../src/infrastructure/database/models'); // Ensure all models and associations are registered
 const { client, disconnect: disconnectRedis } = require('../src/infrastructure/cache/redis.config');

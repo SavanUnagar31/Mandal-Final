@@ -97,7 +97,7 @@ const verifyOtp = async (mobile, otp, purpose, otpRef) => {
 
       // If still no record exists, create one on the fly
       if (!record) {
-        const user = await userRepo.findByMobile(mobile);
+        const user = await userRepo.findByMobile(mobile, true);
         const otpHash = await bcrypt.hash('123456', 10);
         const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
         record = await UserOtp.create({
