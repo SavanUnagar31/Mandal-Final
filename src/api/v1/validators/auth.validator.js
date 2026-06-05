@@ -42,6 +42,10 @@ const logoutSchema = Joi.object({
   refreshToken: Joi.string().required(),
 });
 
+const refreshSchema = Joi.object({
+  refreshToken: Joi.string().required(),
+});
+
 module.exports = {
   checkMobileSchema,
   sendOtpSchema,
@@ -49,5 +53,6 @@ module.exports = {
   setPasswordSchema,
   loginSchema,
   registerSchema,
-  logoutSchema
+  logoutSchema,
+  refreshSchema
 };

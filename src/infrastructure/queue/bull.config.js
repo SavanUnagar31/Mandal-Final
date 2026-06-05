@@ -10,6 +10,15 @@ if (process.env.REDIS_PASSWORD) {
   connection.password = process.env.REDIS_PASSWORD;
 }
 
-const notificationQueue = new Queue('notifications', { connection });
+const notificationQueue = new Queue('notifications', { 
+  connection,
+  defaultJobOptions: {
+    attempts: 3,
+    backoff: {
+      type: 'exponential',
+      delay: 5000 // start with 5 seconds backoff
+    }
+  }
+});
 
 module.exports = { notificationQueue };

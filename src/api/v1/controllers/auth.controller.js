@@ -1,6 +1,8 @@
 const authService = require('../../../domains/auth/services/auth.service');
 const logger = require('../../../utils/logger');
 const AppError = require('../../../utils/error');
+const { recordFailedLogin, clearLoginLockout } = require('../middlewares/rateLimit.middleware');
+const { recordAuditLog } = require('../../../utils/audit');
 
 const checkMobile = async (req, res, next) => {
   try {
@@ -67,9 +69,21 @@ const setPassword = async (req, res, next) => {
 };
 
 const login = async (req, res, next) => {
+  const { mobile, password } = req.body;
+  const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket.remoteAddress;
   try {
-    const { mobile, password } = req.body;
     const result = await authService.login(mobile, password);
+    await clearLoginLockout(mobile, ip);
+    
+    // Audit Log success
+    await recordAuditLog({
+      userId: result.user.id,
+      action: 'USER_LOGIN',
+      details: { mobile },
+      ipAddress: ip,
+      result: 'SUCCESS',
+    });
+
     logger.info('User logged in successfully', { mobile });
     res.status(200).json({
       success: true,
@@ -78,14 +92,37 @@ const login = async (req, res, next) => {
     });
   } catch (err) {
     logger.error('Error in login controller', { error: err.message });
+    
+    // Audit Log failure
+    await recordAuditLog({
+      action: 'USER_LOGIN',
+      details: { mobile, error: err.message },
+      ipAddress: ip,
+      result: 'FAILURE',
+    });
+
+    if (err.errorCode === 'INVALID_CREDENTIALS') {
+      await recordFailedLogin(mobile, ip);
+    }
     next(err);
   }
 };
 
 const register = async (req, res, next) => {
+  const { name, mobile, email, address, latitude, longitude } = req.body;
+  const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket.remoteAddress;
   try {
-    const { name, mobile, email, address, latitude, longitude } = req.body;
     const result = await authService.register({ name, mobile, email, address, latitude, longitude });
+    
+    // Audit Log success
+    await recordAuditLog({
+      userId: result.userId,
+      action: 'USER_REGISTER',
+      details: { name, mobile, email },
+      ipAddress: ip,
+      result: 'SUCCESS',
+    });
+
     logger.info('User registered successfully', { mobile });
     res.status(201).json({
       success: true,
@@ -94,6 +131,14 @@ const register = async (req, res, next) => {
     });
   } catch (err) {
     logger.error('Error in register controller', { error: err.message });
+    
+    // Audit Log failure
+    await recordAuditLog({
+      action: 'USER_REGISTER',
+      details: { name, mobile, email, error: err.message },
+      ipAddress: ip,
+      result: 'FAILURE',
+    });
     next(err);
   }
 };
@@ -113,10 +158,23 @@ const me = async (req, res, next) => {
 };
 
 const logout = async (req, res, next) => {
+  const { refreshToken } = req.body;
+  const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket.remoteAddress;
   try {
-    const { refreshToken } = req.body;
     const result = await authService.logout(refreshToken);
-    logger.info('User logged out successfully');
+    
+    // Audit Log success
+    if (result.userId) {
+      await recordAuditLog({
+        userId: result.userId,
+        action: 'USER_LOGOUT',
+        details: {},
+        ipAddress: ip,
+        result: 'SUCCESS',
+      });
+    }
+
+    logger.info('User logged in/out action completed');
     res.status(200).json({
       success: true,
       message: 'Logout successful',
@@ -124,6 +182,28 @@ const logout = async (req, res, next) => {
     });
   } catch (err) {
     logger.error('Error in logout controller', { error: err.message });
+    await recordAuditLog({
+      action: 'USER_LOGOUT',
+      details: { error: err.message },
+      ipAddress: ip,
+      result: 'FAILURE',
+    });
+    next(err);
+  }
+};
+
+const refresh = async (req, res, next) => {
+  try {
+    const { refreshToken } = req.body;
+    const result = await authService.refresh(refreshToken);
+    logger.info('Tokens refreshed successfully');
+    res.status(200).json({
+      success: true,
+      message: 'Tokens refreshed successfully',
+      data: result
+    });
+  } catch (err) {
+    logger.error('Error in refresh controller', { error: err.message });
     next(err);
   }
 };
@@ -137,4 +217,5 @@ module.exports = {
   register,
   me,
   logout,
+  refresh,
 };

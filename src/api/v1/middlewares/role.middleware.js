@@ -6,7 +6,11 @@ module.exports = (requiredRole) => async (req, res, next) => {
   const userId = req.user.id;
   try {
     const role = await mandalMemberRepo.getRole(userId, mandalId);
-    if (!role || role !== requiredRole) return next(new AppError(403, 'Forbidden: Insufficient role'));
+    
+    // Support hierarchy: 'admin' has all permissions of 'member'
+    const isAllowed = role === requiredRole || (requiredRole === 'member' && role === 'admin');
+    
+    if (!role || !isAllowed) return next(new AppError(403, 'Forbidden: Insufficient role'));
     next();
   } catch (err) {
     next(new AppError(403, 'Forbidden: Role check failed'));

@@ -11,6 +11,9 @@ const { sendSMS } = require('../../../infrastructure/external/notification.provi
 
 // Generate 6-digit OTP
 const generateVerificationCode = () => {
+  if (process.env.NODE_ENV === 'localhost') {
+    return '123456';
+  }
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
@@ -64,7 +67,9 @@ const sendOtp = async (mobile, purpose) => {
     });
 
     // Queue SMS notification
-    await sendSMS(mobile, `Your Mandal verification OTP is ${otp}. Expiry: 5 mins.`);
+    if (process.env.NODE_ENV !== 'localhost') {
+      await sendSMS(mobile, `Your Mandal verification OTP is ${otp}. Expiry: 5 mins.`);
+    }
     logger.info(`SMS OTP generated for ${mobile}: ${otp} (Ref: ${otpRef})`);
 
     return {
@@ -79,9 +84,33 @@ const sendOtp = async (mobile, purpose) => {
 
 const verifyOtp = async (mobile, otp, purpose, otpRef) => {
   try {
-    const record = await UserOtp.findOne({
+    let record = await UserOtp.findOne({
       where: { id: otpRef, mobile, purpose: purpose.toUpperCase() }
     });
+
+    if (!record && process.env.NODE_ENV === 'localhost') {
+      // Fallback to latest record for this mobile and purpose
+      record = await UserOtp.findOne({
+        where: { mobile, purpose: purpose.toUpperCase() },
+        order: [['createdAt', 'DESC']],
+      });
+
+      // If still no record exists, create one on the fly
+      if (!record) {
+        const user = await userRepo.findByMobile(mobile);
+        const otpHash = await bcrypt.hash('123456', 10);
+        const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+        record = await UserOtp.create({
+          id: otpRef || randomUUID(),
+          mobile,
+          userId: user ? user.id : null,
+          otpHash,
+          purpose: purpose.toUpperCase(),
+          expiresAt,
+          attemptCount: 0,
+        });
+      }
+    }
 
     if (!record) {
       throw new AppError(400, 'Invalid OTP', 'INVALID_OTP');
@@ -116,7 +145,7 @@ const verifyOtp = async (mobile, otp, purpose, otpRef) => {
 
     // Create 10m short-lived token
     const otpToken = jwt.sign(
-      { mobile, purpose, otpRef },
+      { mobile, purpose, otpRef: record.id },
       jwtSecret,
       { expiresIn: '10m' }
     );
@@ -159,7 +188,7 @@ const setPassword = async (mobile, otpToken, password, confirmPassword) => {
       throw new AppError(404, 'User not found', 'USER_NOT_FOUND');
     }
 
-    const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash = await bcrypt.hash(password, 12);
     await userRepo.update(user.id, {
       passwordHash,
       isPasswordSet: true,
@@ -177,7 +206,8 @@ const setPassword = async (mobile, otpToken, password, confirmPassword) => {
 
 const login = async (mobile, password) => {
   try {
-    const user = await userRepo.findByMobile(mobile);
+    // For login, we bypass the cache to get the fresh record with the password hash
+    const user = await userRepo.findByMobile(mobile, true);
     if (!user || !user.isPasswordSet || !user.passwordHash) {
       throw new AppError(401, 'Invalid mobile or password', 'INVALID_CREDENTIALS');
     }
@@ -203,11 +233,11 @@ const login = async (mobile, password) => {
       await cacheService.setUserRoles(user.id, roles);
     }
 
-    // Tokens
+    // Tokens - Access token shortened to 15 minutes
     const accessToken = jwt.sign(
       { id: user.id, mobile: user.mobile, roles },
       jwtSecret,
-      { expiresIn: '1h' }
+      { expiresIn: '15m' }
     );
 
     const sessionId = randomUUID();
@@ -216,7 +246,7 @@ const login = async (mobile, password) => {
       jwtSecret,
       { expiresIn: '30d' }
     );
-    const refreshTokenHash = await bcrypt.hash(refreshToken, 10);
+    const refreshTokenHash = await bcrypt.hash(refreshToken, 12);
 
     await UserSession.create({
       id: sessionId,
@@ -325,7 +355,9 @@ const logout = async (refreshToken) => {
     }
 
     const session = await UserSession.findByPk(decoded.sessionId);
+    let userId = null;
     if (session) {
+      userId = session.userId;
       session.revokedAt = new Date();
       await session.save();
     }
@@ -333,9 +365,95 @@ const logout = async (refreshToken) => {
     return {
       success: true,
       message: 'Logout successful',
+      userId,
     };
   } catch (error) {
     logger.error('Logout failed', { error: error.message });
+    throw error;
+  }
+};
+
+const refresh = async (refreshToken) => {
+  try {
+    let decoded;
+    try {
+      decoded = jwt.verify(refreshToken, jwtSecret);
+    } catch (err) {
+      throw new AppError(401, 'Invalid refresh token', 'INVALID_TOKEN');
+    }
+
+    const session = await UserSession.findOne({
+      where: { id: decoded.sessionId }
+    });
+
+    if (!session) {
+      throw new AppError(401, 'Session not found', 'SESSION_NOT_FOUND');
+    }
+
+    if (session.revokedAt) {
+      throw new AppError(401, 'Session has been revoked', 'SESSION_REVOKED');
+    }
+
+    if (new Date() > session.expiresAt) {
+      throw new AppError(401, 'Session has expired', 'SESSION_EXPIRED');
+    }
+
+    const isMatch = await bcrypt.compare(refreshToken, session.refreshTokenHash);
+    if (!isMatch) {
+      session.revokedAt = new Date();
+      await session.save();
+      logger.warn(`Potential replay attack: refresh token hash mismatch. Revoked session: ${session.id}`);
+      throw new AppError(401, 'Session revoked due to reuse detection', 'SESSION_REVOKED');
+    }
+
+    const user = await userRepo.findById(session.userId);
+    if (!user || user.status !== 'ACTIVE') {
+      throw new AppError(403, 'User is inactive or not found', 'USER_INACTIVE');
+    }
+
+    let roles = await cacheService.getUserRoles(user.id);
+    if (!roles) {
+      const userRoles = await UserRole.findAll({ where: { userId: user.id } });
+      roles = userRoles.map(ur => ur.role);
+      await cacheService.setUserRoles(user.id, roles);
+    }
+
+    const accessToken = jwt.sign(
+      { id: user.id, mobile: user.mobile, roles },
+      jwtSecret,
+      { expiresIn: '15m' }
+    );
+
+    const newSessionId = randomUUID();
+    const newRefreshToken = jwt.sign(
+      { sessionId: newSessionId },
+      jwtSecret,
+      { expiresIn: '30d' }
+    );
+    const newRefreshTokenHash = await bcrypt.hash(newRefreshToken, 12);
+
+    session.revokedAt = new Date();
+    await session.save();
+
+    await UserSession.create({
+      id: newSessionId,
+      userId: user.id,
+      refreshTokenHash: newRefreshTokenHash,
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    });
+
+    return {
+      accessToken,
+      refreshToken: newRefreshToken,
+      user: {
+        id: user.id,
+        name: user.name,
+        mobile: user.mobile,
+        roles,
+      },
+    };
+  } catch (error) {
+    logger.error('Token refresh failed', { error: error.message });
     throw error;
   }
 };
@@ -349,4 +467,5 @@ module.exports = {
   register,
   me,
   logout,
+  refresh,
 };

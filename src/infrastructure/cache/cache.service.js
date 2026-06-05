@@ -65,9 +65,11 @@ module.exports = {
   getUser: async (id) => get(getUserKey(id)),
   setUser: async (id, user) => {
     if (!user) return;
-    await set(getUserKey(id), user);
-    if (user.mobile) await set(getUserByMobileKey(user.mobile), user);
-    if (user.email) await set(getUserByEmailKey(user.email), user);
+    const cachedUser = { ...user };
+    delete cachedUser.passwordHash;
+    await set(getUserKey(id), cachedUser);
+    if (user.mobile) await set(getUserByMobileKey(user.mobile), cachedUser);
+    if (user.email) await set(getUserByEmailKey(user.email), cachedUser);
   },
   getUserByMobile: async (mobile) => get(getUserByMobileKey(mobile)),
   getUserByEmail: async (email) => get(getUserByEmailKey(email)),

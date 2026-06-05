@@ -9,6 +9,7 @@ const LoanRepayment = require('./loanRepayment.model');
 const UserRole = require('./userRole.model');
 const UserOtp = require('./userOtp.model');
 const UserSession = require('./userSession.model');
+const AuditLog = require('./auditLog.model');
 
 // Associations
 User.hasMany(Mandal, { foreignKey: 'creatorUserId' });
@@ -41,6 +42,9 @@ UserOtp.belongsTo(User, { foreignKey: 'userId' });
 User.hasMany(UserSession, { foreignKey: 'userId' });
 UserSession.belongsTo(User, { foreignKey: 'userId' });
 
+User.hasMany(AuditLog, { foreignKey: 'userId' });
+AuditLog.belongsTo(User, { foreignKey: 'userId' });
+
 module.exports = {
   sequelize,
   Op,
@@ -52,5 +56,6 @@ module.exports = {
   LoanRepayment,
   UserRole,
   UserOtp,
-  UserSession
+  UserSession,
+  AuditLog,
 };

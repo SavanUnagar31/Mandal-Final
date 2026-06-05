@@ -53,13 +53,15 @@ const findByEmail = async (email) => {
   }
 };
 
-const findByMobile = async (mobile) => {
+const findByMobile = async (mobile, bypassCache = false) => {
   try {
-    const cached = await cacheService.getUserByMobile(mobile);
-    if (cached) return cached;
+    if (!bypassCache) {
+      const cached = await cacheService.getUserByMobile(mobile);
+      if (cached) return cached;
+    }
 
     const user = await User.findOne({ where: { mobile } });
-    if (user) {
+    if (user && !bypassCache) {
       await cacheService.setUser(user.id, user.toJSON ? user.toJSON() : user);
     }
     return user;
