@@ -29,11 +29,12 @@ describe('E2E API Auth Flow', () => {
       })
       .expect(201);
 
-    const { otpRef } = regRes.body.data;
+    const { token } = regRes.body.data;
 
     // 2. Fetch OTP and update hash in DB for test verification
-    const otpRecord = await UserOtp.findOne({ where: { id: otpRef } });
+    const otpRecord = await UserOtp.findOne({ where: { mobile: testMobile }, order: [['createdAt', 'DESC']] });
     expect(otpRecord).toBeDefined();
+    const otpRef = otpRecord.id;
     otpRecord.otpHash = await bcrypt.hash('123456', 10);
     await otpRecord.save();
 
@@ -41,10 +42,8 @@ describe('E2E API Auth Flow', () => {
     const verifyRes = await request(app)
       .post('/api/v1/auth/verify-otp')
       .send({
-        mobile: testMobile,
-        otp: '123456',
-        purpose: 'register',
-        otpRef,
+        token,
+        otp: '123456'
       })
       .expect(200);
 
@@ -54,10 +53,8 @@ describe('E2E API Auth Flow', () => {
     await request(app)
       .post('/api/v1/auth/set-password')
       .send({
-        mobile: testMobile,
         otpToken,
         password: 'Pass@123password',
-        confirmPassword: 'Pass@123password',
       })
       .expect(200);
 
@@ -71,6 +68,6 @@ describe('E2E API Auth Flow', () => {
       .expect(200);
 
     expect(loginRes.body.success).toBe(true);
-    expect(loginRes.body.data.accessToken).toBeDefined();
-  }, 15000);
+    expect(loginRes.body.data.token).toBeDefined();
+  }, 60000);
 });

@@ -12,9 +12,12 @@ module.exports = (err, req, res, next) => {
     
     // Mask internal error messages in production
     const isProduction = process.env.NODE_ENV === 'production';
-    const message = (status === 500 && isProduction) 
+    let message = (status === 500 && isProduction) 
       ? 'Internal server error' 
       : (err.message || 'Internal server error');
+    if (typeof message === 'string') {
+      message = message.replace(/"/g, '');
+    }
     const code = (status === 500 && isProduction) 
       ? 'INTERNAL_ERROR' 
       : (err.errorCode || 'INTERNAL_ERROR');

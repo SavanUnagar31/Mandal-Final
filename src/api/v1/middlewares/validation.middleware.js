@@ -7,11 +7,11 @@ const validate = (schema) => async (req, res, next) => {
     next();
   } catch (error) {
     const details = error.details ? error.details.map(err => ({
-      message: err.message,
+      message: err.message.replace(/"/g, ''),
       path: err.path,
       type: err.type
     })) : [];
-    const message = error.details ? error.details.map(err => err.message).join(', ') : error.message;
+    const message = error.details ? error.details.map(err => err.message.replace(/"/g, '')).join(', ') : error.message.replace(/"/g, '');
     next(new AppError(400, message, 'VALIDATION_ERROR', details));
   }
 };

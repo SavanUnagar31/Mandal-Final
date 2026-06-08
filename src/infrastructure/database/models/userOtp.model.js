@@ -23,7 +23,7 @@ const UserOtp = sequelize.define('UserOtp', {
   },
   purpose: {
     type: DataTypes.ENUM('REGISTER', 'LOGIN', 'FORGOT_PASSWORD'),
-    allowNull: false,
+    allowNull: true,
   },
   expiresAt: {
     type: DataTypes.DATE,

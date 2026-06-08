@@ -2,26 +2,20 @@ const Joi = require('joi');
 
 const checkMobileSchema = Joi.object({
   mobile: Joi.string().pattern(/^[0-9]{10}$/).required(),
-  purpose: Joi.string().valid('login', 'register', 'forgot-password').required(),
 });
 
 const sendOtpSchema = Joi.object({
   mobile: Joi.string().pattern(/^[0-9]{10}$/).required(),
-  purpose: Joi.string().valid('login', 'register', 'forgot-password').required(),
 });
 
 const verifyOtpSchema = Joi.object({
-  mobile: Joi.string().pattern(/^[0-9]{10}$/).required(),
+  token: Joi.string().required(),
   otp: Joi.string().length(6).pattern(/^[0-9]+$/).required(),
-  purpose: Joi.string().valid('login', 'register', 'forgot-password').required(),
-  otpRef: Joi.string().uuid().required(),
 });
 
 const setPasswordSchema = Joi.object({
-  mobile: Joi.string().pattern(/^[0-9]{10}$/).required(),
   otpToken: Joi.string().required(),
   password: Joi.string().min(6).required(),
-  confirmPassword: Joi.string().min(6).required(),
 });
 
 const loginSchema = Joi.object({

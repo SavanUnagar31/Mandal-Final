@@ -6,12 +6,13 @@ const { recordAuditLog } = require('../../../utils/audit');
 
 const checkMobile = async (req, res, next) => {
   try {
-    const { mobile, purpose } = req.body;
-    const result = await authService.checkMobile(mobile, purpose);
-    logger.info('Mobile check completed successfully', { mobile, purpose });
+    const { mobile } = req.body;
+    const result = await authService.checkMobile(mobile);
+    logger.info('Mobile check completed successfully', { mobile });
+    const message = result.isPasswordSet ? 'Mobile checked successfully' : 'OTP sent successfully';
     res.status(200).json({
       success: true,
-      message: 'Mobile checked successfully',
+      message,
       data: result
     });
   } catch (err) {
@@ -22,9 +23,9 @@ const checkMobile = async (req, res, next) => {
 
 const sendOtp = async (req, res, next) => {
   try {
-    const { mobile, purpose } = req.body;
-    const result = await authService.sendOtp(mobile, purpose);
-    logger.info('OTP sent successfully', { mobile, purpose });
+    const { mobile } = req.body;
+    const result = await authService.sendOtp(mobile);
+    logger.info('OTP sent successfully', { mobile });
     res.status(200).json({
       success: true,
       message: 'OTP sent successfully',
@@ -38,12 +39,12 @@ const sendOtp = async (req, res, next) => {
 
 const verifyOtp = async (req, res, next) => {
   try {
-    const { mobile, otp, purpose, otpRef } = req.body;
-    const result = await authService.verifyOtp(mobile, otp, purpose, otpRef);
-    logger.info('OTP verified successfully', { mobile, purpose, otpRef });
+    const { token, otp } = req.body;
+    const result = await authService.verifyOtp(token, otp);
+    logger.info('OTP verified successfully');
     res.status(200).json({
       success: true,
-      message: 'OTP verified',
+      message: 'OTP verified successfully',
       data: result
     });
   } catch (err) {
@@ -54,13 +55,12 @@ const verifyOtp = async (req, res, next) => {
 
 const setPassword = async (req, res, next) => {
   try {
-    const { mobile, otpToken, password, confirmPassword } = req.body;
-    const result = await authService.setPassword(mobile, otpToken, password, confirmPassword);
-    logger.info('Password set successfully', { mobile });
+    const { otpToken, password } = req.body;
+    await authService.setPassword(otpToken, password);
+    logger.info('Password set successfully');
     res.status(200).json({
       success: true,
-      message: 'Password set successfully',
-      data: result
+      message: 'Password updated successfully'
     });
   } catch (err) {
     logger.error('Error in setPassword controller', { error: err.message });
@@ -126,8 +126,10 @@ const register = async (req, res, next) => {
     logger.info('User registered successfully', { mobile });
     res.status(201).json({
       success: true,
-      message: 'Account created. OTP sent.',
-      data: result
+      message: 'OTP sent successfully',
+      data: {
+        token: result.token
+      }
     });
   } catch (err) {
     logger.error('Error in register controller', { error: err.message });
@@ -177,8 +179,7 @@ const logout = async (req, res, next) => {
     logger.info('User logged in/out action completed');
     res.status(200).json({
       success: true,
-      message: 'Logout successful',
-      data: result
+      message: 'Logged out successfully'
     });
   } catch (err) {
     logger.error('Error in logout controller', { error: err.message });

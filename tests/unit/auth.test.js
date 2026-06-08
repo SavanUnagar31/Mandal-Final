@@ -39,28 +39,34 @@ describe('Auth Service Unit Tests', () => {
   describe('checkMobile', () => {
     it('should throw 404 if user not found', async () => {
       userRepo.findByMobile.mockResolvedValue(null);
-      await expect(authService.checkMobile('1234567890', 'login')).rejects.toMatchObject({
+      await expect(authService.checkMobile('1234567890')).rejects.toMatchObject({
         statusCode: 404,
         errorCode: 'USER_NOT_FOUND',
       });
     });
 
-    it('should return nextAction LOGIN if user has password set', async () => {
+    it('should return isPasswordSet true if user has password set', async () => {
       userRepo.findByMobile.mockResolvedValue({ mobile: '1234567890', isPasswordSet: true });
-      const res = await authService.checkMobile('1234567890', 'login');
-      expect(res.nextAction).toBe('LOGIN');
+      const res = await authService.checkMobile('1234567890');
+      expect(res.isPasswordSet).toBe(true);
     });
 
-    it('should return nextAction SEND_OTP if user does not have password set', async () => {
-      userRepo.findByMobile.mockResolvedValue({ mobile: '1234567890', isPasswordSet: false });
-      const res = await authService.checkMobile('1234567890', 'login');
-      expect(res.nextAction).toBe('SEND_OTP');
+    it('should return token and isPasswordSet false if user does not have password set', async () => {
+      userRepo.findByMobile.mockResolvedValue({ id: 'user_uuid', mobile: '1234567890', isPasswordSet: false });
+      UserOtp.create.mockResolvedValue({});
+      const res = await authService.checkMobile('1234567890');
+      expect(res.isPasswordSet).toBe(false);
+      expect(res.token).toBeDefined();
     });
   });
 
   describe('register', () => {
-    it('should register a new user and return OTP reference details', async () => {
-      userRepo.findByMobile.mockResolvedValue(null);
+    it('should register a new user and return token details', async () => {
+      // For uniqueness check findByMobile returns null, but for sendOtp it must return the created user!
+      // So we mock findByMobile to return null on first call, and the created user on subsequent calls.
+      userRepo.findByMobile
+        .mockResolvedValueOnce(null) // uniqueness check
+        .mockResolvedValueOnce({ id: 'user_uuid', mobile: '9999999999' }); // sendOtp check
       userRepo.findByEmail.mockResolvedValue(null);
       userRepo.create.mockResolvedValue({ id: 'user_uuid', mobile: '9999999999', name: 'Test' });
       UserRole.create.mockResolvedValue({});
@@ -72,8 +78,7 @@ describe('Auth Service Unit Tests', () => {
         email: 'test@example.com',
       });
 
-      expect(res.nextAction).toBe('VERIFY_OTP');
-      expect(res.otpRef).toBeDefined();
+      expect(res.token).toBeDefined();
       expect(userRepo.create).toHaveBeenCalled();
       expect(UserRole.create).toHaveBeenCalledWith({ userId: 'user_uuid', role: 'MANDAL_OWNER' });
       expect(sendSMS).toHaveBeenCalled();

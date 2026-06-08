@@ -17,7 +17,7 @@ const generateVerificationCode = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
-const checkMobile = async (mobile, purpose) => {
+const checkMobile = async (mobile) => {
   try {
     const user = await userRepo.findByMobile(mobile);
     if (!user) {
@@ -25,16 +25,19 @@ const checkMobile = async (mobile, purpose) => {
     }
 
     const isPasswordSet = user.isPasswordSet;
-    let nextAction = 'SEND_OTP';
-    if (purpose === 'login' && isPasswordSet) {
-      nextAction = 'LOGIN';
+    if (isPasswordSet) {
+      return {
+        mobile: user.mobile,
+        isPasswordSet: true,
+      };
     }
 
+    // If password is not set, automatically send OTP and return token
+    const otpData = await sendOtp(mobile);
     return {
       mobile: user.mobile,
-      isRegistered: true,
-      isPasswordSet,
-      nextAction,
+      isPasswordSet: false,
+      token: otpData.token,
     };
   } catch (error) {
     logger.error('Error in checkMobile service', { mobile, error: error.message });
@@ -42,13 +45,11 @@ const checkMobile = async (mobile, purpose) => {
   }
 };
 
-const sendOtp = async (mobile, purpose) => {
+const sendOtp = async (mobile) => {
   try {
     const user = await userRepo.findByMobile(mobile);
-    if (purpose === 'login' || purpose === 'forgot-password') {
-      if (!user) {
-        throw new AppError(404, 'User not found', 'USER_NOT_FOUND');
-      }
+    if (!user) {
+      throw new AppError(404, 'User not found', 'USER_NOT_FOUND');
     }
 
     const otp = generateVerificationCode();
@@ -59,9 +60,9 @@ const sendOtp = async (mobile, purpose) => {
     await UserOtp.create({
       id: otpRef,
       mobile,
-      userId: user ? user.id : null,
+      userId: user.id,
       otpHash,
-      purpose: purpose.toUpperCase(),
+      purpose: 'LOGIN',
       expiresAt,
       attemptCount: 0,
     });
@@ -72,9 +73,9 @@ const sendOtp = async (mobile, purpose) => {
     }
     logger.info(`SMS OTP generated for ${mobile}: ${otp} (Ref: ${otpRef})`);
 
+    const token = jwt.sign({ mobile, otpRef }, jwtSecret, { expiresIn: '5m' });
     return {
-      otpRef,
-      expiresIn: 300,
+      token,
     };
   } catch (error) {
     logger.error('Error in sendOtp service', { mobile, error: error.message });
@@ -82,16 +83,25 @@ const sendOtp = async (mobile, purpose) => {
   }
 };
 
-const verifyOtp = async (mobile, otp, purpose, otpRef) => {
+const verifyOtp = async (token, otp) => {
   try {
+    let decoded;
+    try {
+      decoded = jwt.verify(token, jwtSecret);
+    } catch (err) {
+      throw new AppError(400, 'Invalid or expired OTP token', 'INVALID_TOKEN');
+    }
+
+    const { mobile, otpRef } = decoded;
+
     let record = await UserOtp.findOne({
-      where: { id: otpRef, mobile, purpose: purpose.toUpperCase() }
+      where: { id: otpRef, mobile }
     });
 
     if (!record && process.env.NODE_ENV === 'localhost') {
-      // Fallback to latest record for this mobile and purpose
+      // Fallback to latest record for this mobile
       record = await UserOtp.findOne({
-        where: { mobile, purpose: purpose.toUpperCase() },
+        where: { mobile },
         order: [['createdAt', 'DESC']],
       });
 
@@ -105,7 +115,7 @@ const verifyOtp = async (mobile, otp, purpose, otpRef) => {
           mobile,
           userId: user ? user.id : null,
           otpHash,
-          purpose: purpose.toUpperCase(),
+          purpose: 'LOGIN',
           expiresAt,
           attemptCount: 0,
         });
@@ -145,27 +155,22 @@ const verifyOtp = async (mobile, otp, purpose, otpRef) => {
 
     // Create 10m short-lived token
     const otpToken = jwt.sign(
-      { mobile, purpose, otpRef: record.id },
+      { mobile, otpRef: record.id },
       jwtSecret,
       { expiresIn: '10m' }
     );
 
     return {
       otpToken,
-      nextAction: 'SET_PASSWORD',
     };
   } catch (error) {
-    logger.error('Error in verifyOtp service', { mobile, error: error.message });
+    logger.error('Error in verifyOtp service', { error: error.message });
     throw error;
   }
 };
 
-const setPassword = async (mobile, otpToken, password, confirmPassword) => {
+const setPassword = async (otpToken, password) => {
   try {
-    if (password !== confirmPassword) {
-      throw new AppError(400, 'Password and confirm password do not match', 'PASSWORD_MISMATCH');
-    }
-
     let decoded;
     try {
       decoded = jwt.verify(otpToken, jwtSecret);
@@ -173,12 +178,10 @@ const setPassword = async (mobile, otpToken, password, confirmPassword) => {
       throw new AppError(400, 'Invalid or expired OTP token', 'INVALID_TOKEN');
     }
 
-    if (decoded.mobile !== mobile) {
-      throw new AppError(400, 'Invalid OTP token details', 'INVALID_TOKEN');
-    }
+    const { mobile, otpRef } = decoded;
 
     // Double check OTP ref was verified
-    const otpRec = await UserOtp.findByPk(decoded.otpRef);
+    const otpRec = await UserOtp.findByPk(otpRef);
     if (!otpRec || !otpRec.verifiedAt || otpRec.mobile !== mobile) {
       throw new AppError(400, 'OTP verification required', 'INVALID_OTP');
     }
@@ -195,11 +198,9 @@ const setPassword = async (mobile, otpToken, password, confirmPassword) => {
       isMobileVerified: true, // Mark verified when password is set successfully via verified OTP
     });
 
-    return {
-      nextAction: 'LOGIN',
-    };
+    return true;
   } catch (error) {
-    logger.error('Error in setPassword service', { mobile, error: error.message });
+    logger.error('Error in setPassword service', { error: error.message });
     throw error;
   }
 };
@@ -256,13 +257,13 @@ const login = async (mobile, password) => {
     });
 
     return {
-      accessToken,
+      token: accessToken,
       refreshToken,
       user: {
         id: user.id,
         name: user.name,
         mobile: user.mobile,
-        roles,
+        email: user.email,
       },
     };
   } catch (error) {
@@ -304,12 +305,11 @@ const register = async ({ name, mobile, email, address, latitude, longitude }) =
     await cacheService.invalidateUserRoles(user.id);
 
     // Send OTP
-    const otpData = await sendOtp(mobile, 'register');
+    const otpData = await sendOtp(mobile);
 
     return {
+      token: otpData.token,
       userId: user.id,
-      otpRef: otpData.otpRef,
-      nextAction: 'VERIFY_OTP',
     };
   } catch (error) {
     logger.error('Registration failed', { mobile, error: error.message });
@@ -324,19 +324,11 @@ const me = async (userId) => {
       throw new AppError(404, 'User not found', 'USER_NOT_FOUND');
     }
 
-    let roles = await cacheService.getUserRoles(userId);
-    if (!roles) {
-      const userRoles = await UserRole.findAll({ where: { userId } });
-      roles = userRoles.map(ur => ur.role);
-      await cacheService.setUserRoles(userId, roles);
-    }
-
     return {
       id: user.id,
       name: user.name,
       mobile: user.mobile,
       email: user.email,
-      roles,
       mandals: [],
     };
   } catch (error) {
@@ -443,13 +435,13 @@ const refresh = async (refreshToken) => {
     });
 
     return {
-      accessToken,
+      token: accessToken,
       refreshToken: newRefreshToken,
       user: {
         id: user.id,
         name: user.name,
         mobile: user.mobile,
-        roles,
+        email: user.email,
       },
     };
   } catch (error) {

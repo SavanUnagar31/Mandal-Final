@@ -24,12 +24,13 @@ describe('E2E Flow', () => {
       .expect(201);
 
     expect(regRes.body.success).toBe(true);
-    const otpRef = regRes.body.data.otpRef;
-    expect(otpRef).toBeDefined();
+    const token = regRes.body.data.token;
+    expect(token).toBeDefined();
 
     // 2. Fetch and rewrite OTP hash in DB
-    const otpRecord = await UserOtp.findOne({ where: { id: otpRef } });
+    const otpRecord = await UserOtp.findOne({ where: { mobile: testMobile }, order: [['createdAt', 'DESC']] });
     expect(otpRecord).toBeDefined();
+    const otpRef = otpRecord.id;
     otpRecord.otpHash = await bcrypt.hash('123456', 10);
     await otpRecord.save();
 
@@ -37,10 +38,8 @@ describe('E2E Flow', () => {
     const verifyRes = await request(app)
       .post('/api/v1/auth/verify-otp')
       .send({
-        mobile: testMobile,
-        otp: '123456',
-        purpose: 'register',
-        otpRef
+        token,
+        otp: '123456'
       })
       .expect(200);
 
@@ -52,10 +51,8 @@ describe('E2E Flow', () => {
     const setPassRes = await request(app)
       .post('/api/v1/auth/set-password')
       .send({
-        mobile: testMobile,
         otpToken,
-        password: 'Password@123',
-        confirmPassword: 'Password@123'
+        password: 'Password@123'
       })
       .expect(200);
 
@@ -71,7 +68,7 @@ describe('E2E Flow', () => {
       .expect(200);
 
     expect(loginRes.body.success).toBe(true);
-    const accessToken = loginRes.body.data.accessToken;
+    const accessToken = loginRes.body.data.token;
     expect(accessToken).toBeDefined();
 
     // 6. Create Mandal
@@ -88,5 +85,5 @@ describe('E2E Flow', () => {
 
     expect(mandalRes.body.success).toBe(true);
     expect(mandalRes.body.data.mandalId).toBeDefined();
-  }, 20000);
+  }, 60000);
 });

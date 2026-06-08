@@ -17,19 +17,15 @@ paths:
           application/json:
             schema:
               type: object
-              required: [mobile, purpose]
+              required: [mobile]
               properties:
                 mobile:
                   type: string
                   pattern: '^[0-9]{10}$'
                   example: "7621892194"
-                purpose:
-                  type: string
-                  enum: [login, register, forgot-password]
-                  example: "login"
       responses:
         "200":
-          description: Successfully checked mobile number status
+          description: Successfully checked mobile number status. If the password is not set, an OTP is automatically sent, and a token is returned.
           content:
             application/json:
               schema:
@@ -38,15 +34,24 @@ paths:
                   success:
                     type: boolean
                     example: true
+                  message:
+                    type: string
+                    example: "OTP sent successfully"
                   data:
                     type: object
                     properties:
-                      nextAction:
+                      mobile:
                         type: string
-                        enum: [LOGIN, SEND_OTP]
-                        example: "LOGIN"
+                        example: "7621892194"
+                      isPasswordSet:
+                        type: boolean
+                        example: false
+                      token:
+                        type: string
+                        description: "Short-lived JWT (valid for 5 mins) containing mobile and otpRef. Pass this to /verify-otp as the 'token' parameter."
+                        example: "eyJhbGciOiJIUzI1Ni..."
         "404":
-          description: User not found (if purpose is login or forgot-password)
+          description: User not found
           content:
             application/json:
               schema:
@@ -74,16 +79,12 @@ paths:
           application/json:
             schema:
               type: object
-              required: [mobile, purpose]
+              required: [mobile]
               properties:
                 mobile:
                   type: string
                   pattern: '^[0-9]{10}$'
                   example: "7621892194"
-                purpose:
-                  type: string
-                  enum: [login, register, forgot-password]
-                  example: "register"
       responses:
         "200":
           description: OTP sent successfully
@@ -95,16 +96,16 @@ paths:
                   success:
                     type: boolean
                     example: true
+                  message:
+                    type: string
+                    example: "OTP sent successfully"
                   data:
                     type: object
                     properties:
-                      otpRef:
+                      token:
                         type: string
-                        format: uuid
-                        example: "123e4567-e89b-12d3-a456-426614174000"
-                      nextAction:
-                        type: string
-                        example: "VERIFY_OTP"
+                        description: "Short-lived JWT (valid for 5 mins) containing mobile and otpRef. Pass this to /verify-otp as the 'token' parameter."
+                        example: "eyJhbGciOiJIUzI1Ni..."
   /api/v1/auth/verify-otp:
     post:
       summary: Verify mobile number OTP
@@ -115,24 +116,16 @@ paths:
           application/json:
             schema:
               type: object
-              required: [mobile, otp, purpose, otpRef]
+              required: [token, otp]
               properties:
-                mobile:
+                token:
                   type: string
-                  pattern: '^[0-9]{10}$'
-                  example: "7621892194"
+                  description: "The 5-minute short-lived JWT returned by register, check-mobile, or send-otp."
+                  example: "eyJhbGciOiJIUzI1Ni..."
                 otp:
                   type: string
                   pattern: '^[0-9]{6}$'
                   example: "123456"
-                purpose:
-                  type: string
-                  enum: [login, register, forgot-password]
-                  example: "register"
-                otpRef:
-                  type: string
-                  format: uuid
-                  example: "123e4567-e89b-12d3-a456-426614174000"
       responses:
         "200":
           description: OTP verified successfully
@@ -144,16 +137,16 @@ paths:
                   success:
                     type: boolean
                     example: true
+                  message:
+                    type: string
+                    example: "OTP verified successfully"
                   data:
                     type: object
                     properties:
                       otpToken:
                         type: string
+                        description: "A 10-minute short-lived verification token. Pass this to /set-password as the 'otpToken' parameter."
                         example: "eyJhbGciOiJIUzI1Ni..."
-                      nextAction:
-                        type: string
-                        enum: [SET_PASSWORD, LOGIN]
-                        example: "SET_PASSWORD"
         "400":
           description: Invalid OTP or too many attempts
           content:
@@ -183,26 +176,19 @@ paths:
           application/json:
             schema:
               type: object
-              required: [mobile, otpToken, password, confirmPassword]
+              required: [otpToken, password]
               properties:
-                mobile:
-                  type: string
-                  pattern: '^[0-9]{10}$'
-                  example: "7621892194"
                 otpToken:
                   type: string
+                  description: "The 10-minute short-lived verification token returned by /verify-otp."
                   example: "eyJhbGciOiJIUzI1Ni..."
                 password:
                   type: string
                   minLength: 6
                   example: "Pass@123password"
-                confirmPassword:
-                  type: string
-                  minLength: 6
-                  example: "Pass@123password"
       responses:
         "200":
-          description: Password set successfully
+          description: Password set/updated successfully
           content:
             application/json:
               schema:
@@ -211,12 +197,9 @@ paths:
                   success:
                     type: boolean
                     example: true
-                  data:
-                    type: object
-                    properties:
-                      nextAction:
-                        type: string
-                        example: "LOGIN"
+                  message:
+                    type: string
+                    example: "Password updated successfully"
   /api/v1/auth/login:
     post:
       summary: Login via mobile and password
@@ -247,14 +230,19 @@ paths:
                   success:
                     type: boolean
                     example: true
+                  message:
+                    type: string
+                    example: "Login successful"
                   data:
                     type: object
                     properties:
-                      accessToken:
+                      token:
                         type: string
+                        description: "Bearer Access Token (short-lived, 15m) used for subsequent API calls. Send in Authorization header as Bearer."
                         example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
                       refreshToken:
                         type: string
+                        description: "Refresh token (long-lived, 30d) used to get a new access token via /refresh."
                         example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
                       user:
                         type: object
@@ -272,11 +260,6 @@ paths:
                           email:
                             type: string
                             example: "user@example.com"
-                          roles:
-                            type: array
-                            items:
-                              type: string
-                            example: ["MANDAL_OWNER"]
         "401":
           description: Invalid credentials
           content:
@@ -338,16 +321,16 @@ paths:
                   success:
                     type: boolean
                     example: true
+                  message:
+                    type: string
+                    example: "OTP sent successfully"
                   data:
                     type: object
                     properties:
-                      otpRef:
+                      token:
                         type: string
-                        format: uuid
-                        example: "123e4567-e89b-12d3-a456-426614174000"
-                      nextAction:
-                        type: string
-                        example: "VERIFY_OTP"
+                        description: "Short-lived JWT (valid for 5 mins) containing mobile and otpRef. Pass this to /verify-otp as the 'token' parameter."
+                        example: "eyJhbGciOiJIUzI1Ni..."
         "409":
           description: Conflict (e.g. mobile number already registered)
           content:
@@ -384,6 +367,9 @@ paths:
                   success:
                     type: boolean
                     example: true
+                  message:
+                    type: string
+                    example: "User profile retrieved successfully"
                   data:
                     type: object
                     properties:
@@ -400,11 +386,6 @@ paths:
                       email:
                         type: string
                         example: "user@example.com"
-                      roles:
-                        type: array
-                        items:
-                          type: string
-                        example: ["MANDAL_OWNER"]
         "401":
           description: Unauthorized
           content:
@@ -450,12 +431,9 @@ paths:
                   success:
                     type: boolean
                     example: true
-                  data:
-                    type: object
-                    properties:
-                      message:
-                        type: string
-                        example: "Logged out successfully"
+                  message:
+                    type: string
+                    example: "Logged out successfully"
   /api/v1/mandals:
     post:
       summary: Create a new mandal
