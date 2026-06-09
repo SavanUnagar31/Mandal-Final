@@ -136,6 +136,101 @@ const v2Routes = require("./src/api/v2/routes");
 app.use("/api/v2", v2Routes);
 
 // ─────────────────────────────────────────────
+// Developer / Localhost Only Endpoints
+// ─────────────────────────────────────────────
+if (process.env.NODE_ENV === "localhost") {
+  app.get("/swagger-custom.js", (req, res) => {
+    res.setHeader("Content-Type", "application/javascript");
+    res.send(`
+      window.addEventListener('load', () => {
+        const checkInterval = setInterval(() => {
+          // Target the servers block directly
+          const serversDiv = document.querySelector('.swagger-ui .servers');
+          if (serversDiv) {
+            clearInterval(checkInterval);
+            if (document.getElementById('clear-db-redis-btn')) return;
+
+            const btn = document.createElement('button');
+            btn.textContent = '🗑️ Clear DB & Redis';
+            btn.id = 'clear-db-redis-btn';
+
+            Object.assign(btn.style, {
+              backgroundColor: '#d9534f',
+              color: 'white',
+              border: 'none',
+              padding: '6px 14px',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontWeight: 'bold',
+              fontSize: '14px',
+              marginLeft: '16px',
+              marginTop: '20px',
+              height: '34px',
+              verticalAlign: 'bottom',
+              transition: 'background-color 0.2s',
+            });
+
+            btn.addEventListener('mouseenter', () => { btn.style.backgroundColor = '#c0392b'; });
+            btn.addEventListener('mouseleave', () => { btn.style.backgroundColor = '#d9534f'; });
+
+            btn.addEventListener('click', async () => {
+              if (confirm('Are you sure you want to clear the database and Redis? This cannot be undone.')) {
+                btn.disabled = true;
+                btn.textContent = 'Clearing...';
+                try {
+                  const response = await fetch('/api/dev/clear-db-redis', { method: 'POST' });
+                  const result = await response.json();
+                  if (result.success) {
+                    alert('Database and Redis cleared successfully!');
+                    window.location.reload();
+                  } else {
+                    alert('Error: ' + result.message);
+                  }
+                } catch (err) {
+                  alert('Request failed: ' + err.message);
+                } finally {
+                  btn.disabled = false;
+                  btn.textContent = '🗑️ Clear DB & Redis';
+                }
+              }
+            });
+
+            // Insert button right after the servers div (as a sibling)
+            serversDiv.insertAdjacentElement('afterend', btn);
+          }
+        }, 100);
+      });
+    `);
+  });
+
+  app.post("/api/dev/clear-db-redis", async (req, res, next) => {
+    try {
+      logger.info("Dev API: Request to clear DB and Redis received.");
+      
+      // 1. Re-sync Database (Force: true drops and recreates all tables)
+      const { sequelize } = require("./src/config/database.config");
+      require("./src/infrastructure/database/models");
+      await sequelize.sync({ force: true });
+      logger.info("Dev API: Database cleared and synced successfully.");
+
+      // 2. Flush Redis DB
+      const { client } = require("./src/infrastructure/cache/redis.config");
+      if (client.isOpen) {
+        await client.flushDb();
+        logger.info("Dev API: Redis cache flushed successfully.");
+      } else {
+        logger.warn("Dev API: Redis client is not open, skipping flush.");
+      }
+
+      res.status(200).json({ success: true, message: "Database and Redis cleared successfully." });
+    } catch (error) {
+      logger.error("Dev API: Failed to clear DB/Redis", { error: error.message, stack: error.stack });
+      res.status(500).json({ success: false, message: error.message });
+    }
+  });
+}
+
+// ─────────────────────────────────────────────
 // Swagger Docs
 // ─────────────────────────────────────────────
 const { apiBaseUrl } = require("./src/config/environment.config");
@@ -144,7 +239,11 @@ const serverUrl = apiBaseUrl || "";
 const swaggerDocument = YAML.parse(
   swaggerFile.replace("${SERVER_URL}", serverUrl)
 );
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+const swaggerOptions = {};
+if (process.env.NODE_ENV === "localhost") {
+  swaggerOptions.customJs = "/swagger-custom.js";
+}
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument, swaggerOptions));
 
 // ─────────────────────────────────────────────
 // Global Error Handler
